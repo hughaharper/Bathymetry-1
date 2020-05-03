@@ -43,15 +43,16 @@ Documentation created using Sphinx.
 """
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# IMPORT MODULES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# IMPORT MODULES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# to-do vtk.vtkRadiusOutlierRemoval
 import sys
 import matplotlib as mpl
 mpl.use('WXAgg')
 from matplotlib import pyplot as plt
 import wx
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 import wx.py as py
 import wx.lib.agw.aui as aui
 from wx.lib.buttons import GenBitmapButton
@@ -64,12 +65,12 @@ import glob
 import os
 import webbrowser
 import folium
-from folium.plugins import MeasureControl
-from folium.plugins import MousePosition
-from folium import LayerControl
-from wx import html2
 import subprocess
-# to-do vtk.vtkRadiusOutlierRemoval
+from wx import html2
+from three_dim_viewer import ThreeDimViewer
+from folium.plugins import Draw
+from folium.plugins import MousePosition
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,8 +89,10 @@ class PyCMeditor(wx.Frame):
     def __init__(self, *args, **kwds):
         wx.Frame.__init__(self, None, wx.ID_ANY, 'Py-CMeditor', size=(1800, 1050))
 
-        '# %DIR CONTAINING PROGRAM ICONS'
+        ## GET CURRENT WORKING DIR
         self.cwd = os.path.dirname(os.path.realpath(__file__))
+
+        ## DIR CONTAINING PROGRAM ICONS
         self.gui_icons_dir = self.cwd + '/icons/'
 
         '# %START AUI WINDOW MANAGER'
@@ -130,8 +133,9 @@ class PyCMeditor(wx.Frame):
                 "ctrl+up FOR COMMAND HISTORY                                    \r" \
                 "###############################################################"
         py_local = {'__app__': 'gmg Application'}
-        sys.Gmg = self
+        sys.t = self
         self.win = py.shell.Shell(self.ConsolePanel, -1, size=(2200, 1100), locals=py_local, introText=intro)
+
 
         '# %ADD THE PANES TO THE AUI MANAGER'
         self.mgr.AddPane(self.leftPanel, aui.AuiPaneInfo().Name('left').Left().Caption("Controls"))
@@ -176,7 +180,7 @@ class PyCMeditor(wx.Frame):
         '# %MAXIMIZE FRAME'
         self.Maximize(True)
 
-        '# % INITIALISE'
+        '# % INITIALISE THREE DIMESION VERIWER OBJECTS'
         self.predicted_xyz = None
         self.difference_xyz = None
 
@@ -199,8 +203,8 @@ class PyCMeditor(wx.Frame):
 
         self.file.AppendSeparator()
 
-        #m_3d = self.file.Append(-1, "plot\tCtrl-p", "Plot")
-        #self.Bind(wx.EVT_MENU, self.plot_surface, m_3d)
+        # m_3d = self.file.Append(-1, "plot\tCtrl-p", "Plot")
+        # self.Bind(wx.EVT_MENU, self.plot_surface, m_3d)
 
         self.menubar.Append(self.file, "&File")  # %DRAW FILE MENU
 
@@ -256,51 +260,51 @@ class PyCMeditor(wx.Frame):
         self.toolbar = self.CreateToolBar()
 
         t_save_model = self.toolbar.AddTool(wx.ID_ANY, 'Load model',
-                                                 wx.Bitmap(self.gui_icons_dir + 'save_24.png'))
+                                            wx.Bitmap(self.gui_icons_dir + 'save_24.png'))
         # self.Bind(wx.EVT_TOOL, self.save_model, t_save_model)
 
         t_load_model = self.toolbar.AddTool(wx.ID_ANY, 'Load model',
-                                                 wx.Bitmap(self.gui_icons_dir + 'load_24.png'))
+                                            wx.Bitmap(self.gui_icons_dir + 'load_24.png'))
         # self.Bind(wx.EVT_TOOL, self.load_model, t_load_model)
 
         t_calc_model_bott = self.toolbar.AddTool(wx.ID_ANY, 'calculate-gravity',
-                                                      wx.Bitmap(self.gui_icons_dir + 'G_24.png'))
+                                                 wx.Bitmap(self.gui_icons_dir + 'G_24.png'))
         # self.Bind(wx.EVT_TOOL, self.calc_grav_switch, t_calc_model_bott)
 
         t_capture_coordinates = self.toolbar.AddTool(wx.ID_ANY, 't_capture_coordinates',
-                                                          wx.Bitmap(self.gui_icons_dir + 'C_24.png'))
+                                                     wx.Bitmap(self.gui_icons_dir + 'C_24.png'))
         # self.Bind(wx.EVT_TOOL, self.capture_coordinates, t_capture_coordinates)
 
         t_aspect_increase = self.toolbar.AddTool(wx.ID_ANY, 'aspect-ratio-up',
-                                                      wx.Bitmap(self.gui_icons_dir + 'large_up_24.png'))
+                                                 wx.Bitmap(self.gui_icons_dir + 'large_up_24.png'))
         self.Bind(wx.EVT_TOOL, self.aspect_increase, t_aspect_increase)
 
         t_aspect_decrease = self.toolbar.AddTool(wx.ID_ANY, 'aspect-ratio-down',
-                                                      wx.Bitmap(self.gui_icons_dir + 'large_down_24.png'))
+                                                 wx.Bitmap(self.gui_icons_dir + 'large_down_24.png'))
         self.Bind(wx.EVT_TOOL, self.aspect_decrease, t_aspect_decrease)
 
         t_aspect_increase2 = self.toolbar.AddTool(wx.ID_ANY, 'aspect-ratio-up-2',
-                                                       wx.Bitmap(self.gui_icons_dir + 'small_up_24.png'))
+                                                  wx.Bitmap(self.gui_icons_dir + 'small_up_24.png'))
         self.Bind(wx.EVT_TOOL, self.aspect_increase2, t_aspect_increase2)
 
         t_aspect_decrease2 = self.toolbar.AddTool(wx.ID_ANY, 'aspect-ratio-down-2',
-                                                       wx.Bitmap(self.gui_icons_dir + 'small_down_24.png'))
+                                                  wx.Bitmap(self.gui_icons_dir + 'small_down_24.png'))
         self.Bind(wx.EVT_TOOL, self.aspect_decrease2, t_aspect_decrease2)
 
         t_zoom = self.toolbar.AddTool(wx.ID_ANY, 'zoom',
-                                           wx.Bitmap(self.gui_icons_dir + 'zoom_in_24.png'))
+                                      wx.Bitmap(self.gui_icons_dir + 'zoom_in_24.png'))
         self.Bind(wx.EVT_TOOL, self.zoom, t_zoom)
 
         t_zoom_out = self.toolbar.AddTool(wx.ID_ANY, 'zoom out',
-                                               wx.Bitmap(self.gui_icons_dir + 'zoom_out_24.png'))
+                                          wx.Bitmap(self.gui_icons_dir + 'zoom_out_24.png'))
         self.Bind(wx.EVT_TOOL, self.zoom_out, t_zoom_out)
 
         t_full_extent = self.toolbar.AddTool(wx.ID_ANY, 'full_extent',
-                                                  wx.Bitmap(self.gui_icons_dir + 'full_extent_24.png'))
+                                             wx.Bitmap(self.gui_icons_dir + 'full_extent_24.png'))
         self.Bind(wx.EVT_TOOL, self.full_extent, t_full_extent, id=604)
 
         t_pan = self.toolbar.AddTool(wx.ID_ANY, 'pan',
-                                          wx.Bitmap(self.gui_icons_dir + 'pan_24.png'))
+                                     wx.Bitmap(self.gui_icons_dir + 'pan_24.png'))
         self.Bind(wx.EVT_TOOL, self.pan, t_pan)
         #
         # t_transparency_down = self.toolbar.AddTool(wx.ID_ANY, 'transparency_down',
@@ -315,83 +319,62 @@ class PyCMeditor(wx.Frame):
         self.toolbar.SetSize((1790, 36))
 
     def draw_navigation_window(self):
-        """# %INITALISE OBSERVED DATA AND LAYERS"""
+        """INITALISE FOLIUM INTERACTIVE MAP"""
 
-        # self.tile = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}.png'
-        # tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}.png',
-        self.folium_map = folium.Map(location=[0.0, -180.0],
-                                zoom_start=2,
-                                attr='My Data Attribution')
+        # CREATE MAP
+        self.folium_map = folium.Map(location=[0.0, 0.0],
+                                     zoom_start=2,
+                                     tiles=self.cwd+'/8-xyz-tiles/{z}/{x}/{y}.png',
+                                     attr='SRTM15+',
+                                     no_wrap=True)
 
-        self.folium_map.add_child(MeasureControl())
-        self.folium_map.add_child(MousePosition())
-        # self.folium_map.add_child(LayerControl())
+        # LOAD DRAWING FUNCTIONALITY
+        self.draw = Draw(export=True,
+                         filename='outpoint.geojson',
+                         draw_options={'polyline': False, 'rectangle': False, 'circle': False, 'marker': False,
+                                       'circlemarker': False},
+                         edit_options={'poly': {'allowIntersection': False}})
+        self.draw.add_to(self.folium_map)
 
-        merc_file = ('srtm_1.png', 'srtm_2.png', 'srtm_3.png', 'srtm_4.png', 'srtm_5.png', 'srtm_6.png', 'srtm_7.png',
-                     'srtm_8.png')
-        name = (1, 2, 3, 4, 5, 6, 7, 8)
+        # MOUSE POSITION
+        self.mouse_position = MousePosition()
+        self.mouse_position.add_to(self.folium_map)
 
-        lat_min = (-80, 0, -80, 0, -80, 0, -80, 0)
-        lat_max = (0, 80, 0, 80, 0, 80, 0, 80)
-
-        long_min = (90, 90, 0, 0, -90, -90, -180, -180)
-        long_max = (180, 180, 90, 90, 0, 0, -90, -90)
-
-        for i in range(0, 8):
-            img = folium.raster_layers.ImageOverlay(
-                name=name[i], image=merc_file[i], bounds=[[lat_min[i], long_min[i]], [lat_max[i], long_max[i]]],
-                opacity=0.5, interactive=True, cross_origin=True, zorder=-1)
-            img.add_to(self.folium_map)
-
+        # SAVE MAP AS HTML
         self.folium_map.save("my_map.html")
 
-        '#% OPEN FOLIUM HTML MAP IN MAIN WINDOW'
+        # CREATE GUI HTML WINDOW
         self.browser = wx.html2.WebView.New(self.rightPanelbottom, -1)
-        self.browser.LoadURL('/Users/brook/Bathymetry/human_editing/GUI/my_map.html')
+        self.browser.Bind(wx.html2.EVT_WEBVIEW_NAVIGATED, self.on_export)
 
-        """# %CREATE MPL FIGURE CANVAS"""
-        mpl.rcParams['toolbar'] = 'None'
+        # LOAD FOLIUM MAP INTO HTML WINDOW
+        self.browser.LoadURL(self.cwd + '/my_map.html')
 
-        # self.fig = plt.figure()  # %CREATE MPL FIGURE
-        # self.fig = Basemap(projection='robin', lon_0=0.5 * (lons[0] + lons[-1]))
 
-        # self.canvas = FigureCanvas(self.rightPanelbottom, -1, self.fig)  # %CREATE FIGURE CANVAS
-        # self.nav_toolbar = NavigationToolbar(self.canvas)  # %CREATE NAVIGATION TOOLBAR
-        # self.nav_toolbar.Hide()
-
-        '#% SET DRAW COMMAND WHICH CAN BE CALLED TO REDRAW THE FIGURE'
-        # self.draw = self.fig.canvas.draw
-
-        '#% GET THE MODEL DIMENSIONS AND SAMPLE LOCATIONS'
-        self.x1 = -90.
-        self.x2 = 90.
-        self.y1 = -180.
-        self.y2 = 180.
-        self.aspect = 1.
-
-        '#% DRAW MAIN PROGRAM WINDOW'
+        # DRAW MAIN PROGRAM WINDOW
         self.draw_main_frame()
 
-        '#% DRAW BUTTON WINDOW'
+        # DRAW BUTTON WINDOW
         self.draw_button_and_list_frame()
 
-        '#%CONNECT MPL FUNCTIONS'
-        # self.connect_mpl_events()
-
-        '#% UPDATE DISPLAY'
-        # self.display_info()
+        # UPDATE DISPLAY
         self.size_handler()
 
-        '#% REFRESH SIZER POSITIONS'
+        # REFRESH SIZER POSITIONS
         self.Hide()
         self.Show()
 
-    def draw_main_frame(self):
-        """# %DRAW THE PROGRAM CANVASES"""
+    def on_export(self, event):
+        """FIRERS WHEN A NEW WINDOW IS OPENED IN THE WEBVIEWER"""
+        print("fired")
 
-        '#% CURRENT COORDINATES'
-        self.window_font = wx.Font(16, wx.DECORATIVE, wx.ITALIC, wx.NORMAL)  # % SET FONT
-        '#  % SET LONGITUDE'
+    def draw_main_frame(self):
+        """DRAW THE PROGRAM CANVASES"""
+
+        # CURRENT COORDINATES'
+        self.window_font = wx.Font(16, wx.DECORATIVE, wx.ITALIC, wx.NORMAL)  # SET FONT
+
+        # SET LONGITUDE
         self.longitude_text = wx.StaticText(self.rightPaneltop, -1, "Longitude (x):", style=wx.ALIGN_CENTER)
         self.longitude_text.SetFont(self.window_font)
         self.longitude = wx.TextCtrl(self.rightPaneltop, -1)
@@ -429,19 +412,19 @@ class PyCMeditor(wx.Frame):
         """#% CREATE LEFT HAND BUTTON MENU"""
 
         '# %BUTTON ONE'
-        self.button_one = wx.Button(self.leftPanel_top, -1, "Load cm", style=wx.ALIGN_CENTER)
+        self.button_one = wx.Button(self.leftPanel_top, -1, "Load .cm", style=wx.ALIGN_CENTER)
 
         '# %BUTTON TWO'
-        self.button_two = wx.Button(self.leftPanel_top, -1, "Load Xcm", style=wx.ALIGN_CENTER)
+        self.button_two = wx.Button(self.leftPanel_top, -1, "Load .cm dir", style=wx.ALIGN_CENTER)
 
         '# %BUTTON THREE'
-        self.button_three = wx.Button(self.leftPanel_top, -1, "Load Predicted", style=wx.ALIGN_CENTER)
+        self.button_three = wx.Button(self.leftPanel_top, -1, "Load predicted", style=wx.ALIGN_CENTER)
 
         '# %BUTTON FOUR'
-        self.button_four = wx.Button(self.leftPanel_top, -1, "3D Viewer", style=wx.ALIGN_CENTER)
+        self.button_four = wx.Button(self.leftPanel_top, -1, "3D viewer", style=wx.ALIGN_CENTER)
 
         '# %BUTTON FIVE'
-        self.button_five = wx.Button(self.leftPanel_top, -1, "Get Predicted", style=wx.ALIGN_CENTER)
+        self.button_five = wx.Button(self.leftPanel_top, -1, "Get predicted", style=wx.ALIGN_CENTER)
 
         self.file_list_ctrl = wx.ListCtrl(self.leftPanel_bottom, -1, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.list_item_selected, self.file_list_ctrl)
@@ -487,13 +470,9 @@ class PyCMeditor(wx.Frame):
         self.rightPanelbottom.SetSize(self.GetSize())
 
     def connect_mpl_events(self):
-        """#% CONNECT MOUSE AND EVENT BINDINGS"""
-        # self.fig.canvas.mpl_connect('button_press_event', self.button_press)
-        # self.fig.canvas.mpl_connect('motion_notify_event', self.move)
-        # self.fig.canvas.mpl_connect('button_release_event', self.button_release)
-        # self.fig.canvas.mpl_connect('key_press_event', self.key_press)
-        # self.fig.canvas.mpl_connect('pick_event', self.on_pick)
-
+        """
+        CONNECT MOUSE AND EVENT BINDINGS
+        """
         self.button_one.Bind(wx.EVT_BUTTON, self.open_cm_file)
         self.button_two.Bind(wx.EVT_BUTTON, self.open_cm_directory)
         self.button_three.Bind(wx.EVT_BUTTON, self.open_predicted_cm_file)
@@ -564,9 +543,6 @@ class PyCMeditor(wx.Frame):
 
     # GUI INTERACTION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def access_sql(self):
-        pass
-
     def open_cm_file(self, event):
         """# %GET CM FILE TO LOAD"""
         open_file_dialog = wx.FileDialog(self, "Open XY file", "", "", "All files (*.cm)|*.*", wx.FD_OPEN |
@@ -600,30 +576,49 @@ class PyCMeditor(wx.Frame):
     def load_cm_file(self):
         """LOAD .cm FILE DATA INTO PROGRAM"""
         try:
+            ## MAKE COLOR SACLE
+            self.colorbar = plt.cm.get_cmap('RdYlBu')
+
+            ## LOAD .cm FILE USNING NUMPY
             self.cm = np.genfromtxt(self.cm_file, delimiter=' ', dtype=float, filling_values=-9999)  # % LOAD FILE
 
-            '# % ADD .cm FILE TO FOLIUM BASEMAP'
+            ## CREATE FOLIUM SCATTER PLOT OBJECT FOR THE .cm FILE
             fg = folium.FeatureGroup(name="cm_file")
-            for lat, lon, elev, name in zip(self.cm[:, 2], self.cm[:, 1], self.cm[:, 3], self.cm[:, 4]):
+            # for lat, lon, elev, name in zip(self.cm[:, 2], self.cm[:, 1], self.cm[:, 3], self.cm[:, 4]):
+            #     folium.CircleMarker(location=[lat, lon], radius=1, popup=None, fill=True,
+            #                         color=self.color(elev)).add_to(fg)
+            for lat, lon, elev in zip(self.cm[:, 2], self.cm[:, 1], self.cm[:, 3]):
                 folium.CircleMarker(location=[lat, lon], radius=1, popup=None, fill=True,
                                     color=self.color(elev)).add_to(fg)
             self.folium_map.add_child(fg)
+
+            ## SAVE AND DISPLAY THE NEW FOLIUM MAP (INCLUDING THE .cm FILE)
             self.folium_map.save("my_map.html")
-            self.browser.LoadURL('/Users/brook/Bathymetry/human_editing/GUI/my_map.html')
+            self.browser.LoadURL(self.cwd + '/my_map.html')
+            # self.browser.LoadURL(self.cwd + '/tiles-dir/leaflet.html')
+
+
+            # '# % SET WINDOW DIMENSIONS TO FIT CURRENT SURVEY'
+            # self.nav_canvas.set_xlim(self.cm[:, 1].min()-0.2, self.cm[:, 1].max()+0.2)
+            # self.nav_canvas.set_ylim(self.cm[:, 2].min()-0.2, self.cm[:, 2].max()+0.2)
+
         except IndexError:
             error_message = "ERROR IN LOADING PROCESS - FILE MUST BE ASCII SPACE DELIMITED"
             wx.MessageDialog(self, -1, error_message, "Load Error")
             raise
 
-        '# %SET DATA FROM .cm FILE AS NUMPY ARRAYS'
-        self.xyz_input = self.cm[:, 1:4]
-        self.xyz = np.divide(self.xyz_input, (1.0, 1.0, 10000.0))  # % DIVIDE TO MAKE Z SCALE SAME ORDER OF MAG AS X&Z
-        del self.xyz_input
+        '# %GET DATA AS cm FILE DATA AS NUMPY ARRAYS'
+        self.xyz = self.cm[:, 1:4]
+        self.xyz = np.divide(self.xyz, (1.0, 1.0, 10000.0))  # % DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X&Z
         self.xyz_cm_id = self.cm[:, 0].astype(int)  # % GET CM FILE IDs
         self.xyz_width = self.cm.shape[1]
         self.xyz_meta_data = self.cm[:, 4:self.xyz_width]
         self.xyz_point_flags = np.zeros(shape=(1, len(self.xyz)))
-        self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz)+1))
+        self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz) + 1))
+        self.score_xyz = self.cm[:, [1, 2, 6]]
+
+        # GET THE PREDICTED DEPTH GRID
+        # self.get_predicted(None)
 
         '# % If THREE DIMENSIONAL VIEWER IS OPEN, THEN CLOSE IT AND REOPEN WITH NEW .cm FILE'
         try:
@@ -632,6 +627,9 @@ class PyCMeditor(wx.Frame):
             pass
         else:
             self.reload_threed()
+
+        '# %UPDATE MPL CANVAS'
+        # self.draw()
 
     def delete_cm_file(self):
         """" # %DELETE CURRENT .cm FILE SO THE NEWLY SELECTED .cm FILE CAN BE LOADED INTO THE VIEWERS"""
@@ -670,7 +668,7 @@ class PyCMeditor(wx.Frame):
         """ACTIVATED WHEN A FILE FROM THE LIST CONTROL IS SELECTED"""
 
         file = event.GetText()
-        self.selected_file = str(self.active_dir)+"/"+str(file)
+        self.selected_file = str(self.active_dir) + "/" + str(file)
         print(self.selected_file)
 
         '# % IF A .cm FILE IS ALREADY LOADED THEN REMOVE IT BEFORE LOADING THE CURRENT FILE'
@@ -698,18 +696,19 @@ class PyCMeditor(wx.Frame):
             np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
 
             '# %RUN BASH SCRIPT '
-            subprocess.call(self.cwd+"/"+"get_predicted.sh")
+            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename])
 
             '# %LOAD PREDICTED CM'
             self.predicted_cm = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
 
+            '# %MAKE PREDICTED DATA A NUMPY ARRAY - DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X & Z'
+            self.predicted_xyz = np.divide(self.predicted_cm, (1.0, 1.0, 10000.0))
+
             '# %LOAD DIFFERENCE CM'
             self.diff_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-            self.difference_xyz =  np.divide(self.diff_xyz, (1.0, 1.0, 10000.0))
-            '# %GET DATA AS NUMPY ARRAYS'
-            self.predicted_xyz = np.divide(self.predicted_cm, (1.0, 1.0, 10000.0))  # %DIVIDE TO MAKE Z SCALE ON SAME
-                                                                                    #  ORDER OF MAG AS X & Z
 
+            '# %MAKE DIFFERENCE DATA A NUMPY ARRAY - DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X & Z'
+            self.difference_xyz = np.divide(self.diff_xyz, (1.0, 1.0, 10000.0))
         except AttributeError:
             print("ERROR: no .cm file loaded")
         self.busyDlg = None
@@ -727,7 +726,7 @@ class PyCMeditor(wx.Frame):
         '# %OPEN A vtk 3D VIEWER WINDOW AND CREATE A RENDER'
         self.tdv = ThreeDimViewer(self, -1, 'Modify Current Model', self.cm, self.xyz, self.xyz_cm_id,
                                   self.xyz_meta_data, self.xyz_point_flags, self.xyz_cm_line_number,
-                                  self.predicted_xyz,  self.difference_xyz)
+                                  self.predicted_xyz, self.diff_xyz, self.difference_xyz, self.score_xyz)
         self.tdv.Show(True)
 
     def reload_threed(self):
@@ -792,1011 +791,6 @@ class PyCMeditor(wx.Frame):
             self.Destroy()
             wx.GetApp().ExitMainLoop()
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class ThreeDimViewer(wx.Frame):
-    def __init__(self, parent, id, title, cm, xyz, xyz_cm_id, xyz_meta_data, xyz_point_flags,
-                                                                    xyz_cm_line_number, predicted_xyz, difference_xyz):
-        wx.Frame.__init__(self, None, wx.ID_ANY, '3D Viewer', size=(1500, 1100))
-
-        '# %START AUI WINDOW MANAGER'
-        self.tdv_mgr = aui.AuiManager()
-
-        '# %TELL AUI WHICH FRAME TO USE'
-        self.tdv_mgr.SetManagedWindow(self)
-
-        '# %CREATE PANEL TO FILL WITH COORDINATE INFORMATION'
-        self.tdv_top_panel = wx.Panel(self, -1, size=(1350, 1100), style=wx.ALIGN_RIGHT | wx.BORDER_RAISED | wx.EXPAND)
-        self.tdv_top_panel.SetBackgroundColour('blue')
-
-        '# %CREATE PANEL TO FILL WITH MATPLOTLIB INTERACTIVE FIGURE (MAIN NAVIGATION FRAME)'
-        self.tdv_left_panel = wx.Panel(self, -1, size=(150, 1100), style=wx.ALIGN_RIGHT | wx.BORDER_RAISED)
-        self.tdv_left_panel.SetBackgroundColour('grey')
-
-        '# %ADD THE PANES TO THE AUI MANAGER'
-        self.tdv_mgr.AddPane(self.tdv_top_panel, aui.AuiPaneInfo().Name('top').CenterPane())
-        self.tdv_mgr.AddPane(self.tdv_left_panel, aui.AuiPaneInfo().Name('left').Left())
-        self.tdv_mgr.Update()
-
-        ' # % SET Renderer AS OBJECT'
-        self.renderer = vtk.vtkRenderer()
-        self.renderer.SetBackground(0.8, 0.8, 0.8)
-
-        '# % ASSIGN RENDER WINDOW OBJECTS'
-        self.renderWindow = vtk.vtkRenderWindow()
-        self.renderWindow.AddRenderer(self.renderer)
-        self.Interactor = wxVTKRenderWindowInteractor(self.tdv_top_panel, -1)
-        self.Interactor.SetRenderWindow(self.renderWindow)
-        # self.Interactor.RemoveObservers('KeyPressEvent')
-        # self.Interactor.RemoveObservers('CharEvent')
-
-        self.renderer.SetUseDepthPeeling(1)
-        self.renderer.SetOcclusionRatio(0.1)
-        self.renderer.SetMaximumNumberOfPeels(100)
-        self.renderWindow.SetMultiSamples(0)
-        self.renderWindow.SetAlphaBitPlanes(1)
-
-        '# % SET VTK OBSERVERS'
-        self.Interactor.AddObserver("KeyPressEvent", self.keyPressEvent)
-
-        '# % SET RENDERER CAMERA AS OBJECT'
-        self.cam = vtk.vtkCamera()
-        self.renderer.SetActiveCamera(self.cam)
-        self.get_cam()
-
-        '# % SET DEFAULT INTERACTION STYLE'
-        self.base_style = vtk.vtkInteractorStyleTrackballCamera()
-        self.Interactor.SetInteractorStyle(self.base_style)
-        self.current_style = str('base_style')
-
-        ' # % ADD Interactor WINDOW TO TOP BOX'
-        self.box_top = wx.BoxSizer(wx.VERTICAL)
-        self.box_top.Add(self.Interactor, 1, wx.ALIGN_CENTRE | wx.EXPAND)
-
-
-        '# % INITIALIZE OBJECTS FOR LATER --------------------------------------------------------'
-        self.predicted_xyz = predicted_xyz
-        self.difference_xyz = difference_xyz
-
-        self.predicted_color_min = 0.25
-        self.predicted_color_max = 0.65
-
-        '# % ADD MOUSE INTERACTION TOOLS --------------------------------------------------------'
-        # PASS
-
-        '# % CREATE TOOL BUTTONS ----------------------------------------------------------------'
-
-        '# % PICKER BUTTON'
-        self.picker_button = wx.Button(self.tdv_left_panel, -1, "Picking mode", size=(150, 20),
-                                       style=wx.ALIGN_CENTRE)
-        self.picker_button.Bind(wx.EVT_BUTTON, self.rubber_picker)
-
-        '# % X SCALE SIZER SLIDER'
-        self.x_scale_text = wx.StaticText(self.tdv_left_panel, -1, "X-scale", style=wx.ALIGN_CENTRE)
-        self.x_scale_slider = wx.Slider(self.tdv_left_panel, value=2.0, minValue=1.0, maxValue=20., size=(150, 20),
-                                         style=wx.SL_HORIZONTAL)
-        self.x_scale_slider.Bind(wx.EVT_SLIDER, self.set_x_scale)
-
-        '# % Y SCALE SIZER SLIDER'
-        self.y_scale_text = wx.StaticText(self.tdv_left_panel, -1, "Y-scale", style=wx.ALIGN_CENTRE)
-        self.y_scale_slider = wx.Slider(self.tdv_left_panel, value=2.0, minValue=1.0, maxValue=20., size=(150, 20),
-                                         style=wx.SL_HORIZONTAL)
-        self.y_scale_slider.Bind(wx.EVT_SLIDER, self.set_y_scale)
-
-        '# % Z SCALE SIZER SLIDER'
-        self.z_scale_text = wx.StaticText(self.tdv_left_panel, -1, "Z-scale", style=wx.ALIGN_CENTRE)
-        self.z_scale_slider = wx.Slider(self.tdv_left_panel, value=2.0, minValue=1.0, maxValue=20., size=(150, 20),
-                                         style=wx.SL_HORIZONTAL)
-        self.z_scale_slider.Bind(wx.EVT_SLIDER, self.set_z_scale)
-
-        '# % POINT SIZER SLIDER'
-        self.size_text = wx.StaticText(self.tdv_left_panel, -1, "Point size", style=wx.ALIGN_CENTRE)
-        self.size_slider = wx.Slider(self.tdv_left_panel, value=4.0, minValue=1.0, maxValue=10., size=(150, 20),
-                                         style=wx.SL_HORIZONTAL)
-        self.size_slider.Bind(wx.EVT_SLIDER, self.set_point_size)
-
-        '# % ADD FLAG BUTTON'
-        self.flag_button = wx.Button(self.tdv_left_panel, -1, "Set Flag", size=(150, 20), style=wx.ALIGN_CENTRE)
-        self.flag_button.Bind(wx.EVT_BUTTON, self.set_flag)
-
-        '# % ADD DELAUNAY BUTTON'
-        self.delaunay_button = wx.Button(self.tdv_left_panel, -1, "Grid", size=(150, 20), style=wx.ALIGN_CENTRE)
-        self.delaunay_button.Bind(wx.EVT_BUTTON, self.delaunay)
-
-        '# % ADD PREDICTED DELAUNAY BUTTON'
-        self.predicted_delaunay_button = wx.Button(self.tdv_left_panel, -1, "Grid Predicted", size=(150, 20),
-                                                   style=wx.ALIGN_CENTRE)
-        self.predicted_delaunay_button.Bind(wx.EVT_BUTTON, self.render_predicted)
-
-        '# % ADD DELETE SELECTED BUTTON'
-        self.delete_selected_button = wx.Button(self.tdv_left_panel, -1, "Delete", size=(150, 20),
-                                                style=wx.ALIGN_CENTRE)
-        self.delete_selected_button.Bind(wx.EVT_BUTTON, self.delete_selected)
-
-        '# % ADD SAVE CM BUTTON'
-        self.save_cm_button = wx.Button(self.tdv_left_panel, -1, "Save .cm", size=(150, 20), style=wx.ALIGN_CENTRE)
-        self.save_cm_button.Bind(wx.EVT_BUTTON, self.save_cm)
-
-        '# % ADD SAVE CM BUTTON'
-        self.toggle_button = wx.Button(self.tdv_left_panel, -1, "Toggle", size=(150, 20), style=wx.ALIGN_CENTRE)
-        self.toggle_button.Bind(wx.EVT_BUTTON, self.toggle)
-
-        '# % PREDICTED MIN'
-        self.predicted_min_text = wx.StaticText(self.tdv_left_panel, -1, "Predicted Min", style=wx.ALIGN_CENTRE)
-        self.predicted_min_color_slider = wx.Slider(self.tdv_left_panel, value=25, minValue=0,
-                                                maxValue=100, size=(150, 20),
-                                                style=wx.SL_HORIZONTAL)
-        self.predicted_min_color_slider.Bind(wx.EVT_SLIDER, self.predicted_min)
-
-        '# % PREDICTED MAX'
-        self.predicted_max_text = wx.StaticText(self.tdv_left_panel, -1, "Predicted Max", style=wx.ALIGN_CENTRE)
-        self.predicted_max_color_slider = wx.Slider(self.tdv_left_panel, value=65, minValue=0,
-                                                    maxValue=100, size=(150, 20), style=wx.SL_HORIZONTAL)
-        self.predicted_max_color_slider.Bind(wx.EVT_SLIDER, self.predicted_max)
-
-        ' #% ADD BUTTONS ETC TO LEFT BOX'
-        self.left_box = wx.FlexGridSizer(cols=1, rows=20, hgap=5, vgap=5)
-        self.left_box.AddMany([self.picker_button, self.x_scale_text, self.x_scale_slider, self.y_scale_text,
-                               self.y_scale_slider, self.z_scale_text, self.z_scale_slider, self.size_text,
-                               self.size_slider, self.flag_button, self.delaunay_button, self.predicted_delaunay_button,
-                               self.delete_selected_button, self.save_cm_button, self.toggle_button,
-                               self.predicted_min_text, self.predicted_min_color_slider, self.predicted_max_text,
-                               self.predicted_max_color_slider])
-
-        '# % RENDER THE XYZ DATA IN 3D'
-        self.cm = cm
-        self.xyz = xyz
-        self.xyz_cm_id = xyz_cm_id
-        self.xyz_meta_data = xyz_meta_data
-        self.xyz_point_flags = xyz_point_flags
-        self.xyz_cm_line_number = xyz_cm_line_number
-
-        '# % DO THE RENDER OF THE POINT DATA'
-        self.do_point_render()
-
-        '# % SET SIZERS'
-        # self.tdv_sizer()
-
-        # '# % CREATE VTK PICKER OBJECTS'
-        # self.cell_picker = vtk.vtkCellPicker()
-        # self.node_picker = vtk.vtkPointPicker()
-        # self.cell_picker.SetTolerance(0.001)
-        # self.node_picker.SetTolerance(0.001)
-        #
-        # self.area_picker = vtk.vtkAreaPicker()  # vtkRenderedAreaPicker?
-        # self.rubber_band_style = vtk.vtkInteractorStyleRubberBandPick()
-
-        '# % SET PICKER STYLE - SO LEFT MOUSE CLICK ALLOWS SELECTION OF A SINGLE POINT'
-        # self.picker_style = MouseInteractorHighLightActor(self.renderWindow, self.pointcloud)
-        # self.picker_style.SetDefaultRenderer(self.renderer)
-        # self.Interactor.SetInteractorStyle(self.picker_style)
-        # self.Interactor.AddObserver("LeftButtonPressEvent", self.picker_style.leftButtonPressEvent)        self.area_picker = vtk.vtkAreaPicker()
-
-        '#PLACE BOX SIZERS IN CORRECT PANELS'
-        self.tdv_top_panel.SetSizerAndFit(self.box_top)
-        self.tdv_left_panel.SetSizerAndFit(self.left_box)
-        self.tdv_top_panel.SetSize(self.GetSize())
-        self.tdv_left_panel.SetSize(self.GetSize())
-
-        '# % INITIZE SWITCHES'
-        self.grid_created = 0
-
-        '# % UPDATE AUI MANGER'
-        self.tdv_mgr.Update()
-
-    def do_point_render(self):
-        """
-        # % RENDER 3D POINTS
-        *** arg1 = XYZ NUMPY ARRAY
-        """
-
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        '  # %SET SCALES'
-        self.x_scale = 1
-        self.y_scale = 1
-        self.z_scale = 1  # SET SCALE VALUE FOR Z-AXIS (CAN BE MODIFIED IN VIEWER USING SLIDING BAR)
-
-        '  # %Render XYZ POINTS'
-        self.pointcloud = VtkPointCloud(self.xyz, self.difference_xyz)
-        for k in range(len(self.xyz)):
-            point = self.xyz[k]
-            xyz_cm_id = self.xyz_cm_id[k]
-            xyz_cm_line_number = self.xyz_cm_line_number[k]
-            if self.difference_xyz is not None:
-                difference_xyz = self.difference_xyz[k]
-            else:
-                difference_xyz = np.zeros_like(point)
-            self.pointcloud.addPoint(point, xyz_cm_id, xyz_cm_line_number, difference_xyz)
-
-        '# % ADD ACTOR TO RENDER'
-        self.renderer.AddActor(self.pointcloud.vtkActor)
-
-        '# % SET POINT SIZE'
-        self.pointcloud.vtkActor.GetProperty().SetPointSize(4)
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        '# % Add 3D AXES WIDGET'
-        self.axesactor = vtk.vtkAxesActor()
-        self.axes = vtk.vtkOrientationMarkerWidget()
-        self.axes.SetOrientationMarker(self.axesactor)
-        self.axes.SetInteractor(self.Interactor)
-        self.axes.EnabledOn()
-        self.axes.InteractiveOn()
-        self.renderer.ResetCamera()
-
-        '#  % CREATE SCALE BAR'
-        self.cb_mapper = self.pointcloud.vtkActor.GetMapper()
-        print(self.cb_mapper)
-        # self.cb_mapper.SetScalarRange(self.xyz[:,2].min(), self.xyz[:,2].max())
-        self.cb_mapper.SetScalarRange(-0.4934, -0.002)
-        self.sb = vtk.vtkScalarBarActor()
-        self.sb.SetLookupTable(self.cb_mapper.GetLookupTable())
-        self.renderer.AddActor(self.sb)
-        self.sb.SetAnnotationTextScaling(100)
-        self.sb.SetTitle("Depth (m)")
-        self.sb.SetLabelFormat("%0.2f")
-        self.sb.SetOrientationToHorizontal()
-        self.sb.SetWidth(0.3)
-        self.sb.SetHeight(0.05)
-        self.sb.GetPositionCoordinate().SetValue(0.7, 0.05)
-
-        '#  % CREATE XYZ OUTLINE AXES GRID'
-        self.outlineMapper = self.pointcloud.vtkActor.GetMapper()
-        self.outlineActor = vtk.vtkCubeAxesActor()
-        self.outlineActor.SetBounds(self.xyz[:, 0].min(), self.xyz[:, 0].max(),
-                                    self.xyz[:, 1].min(), self.xyz[:, 1].max(),
-                                    self.xyz[:, 2].min(), self.xyz[:, 2].max())
-
-        self.outlineActor.SetCamera(self.renderer.GetActiveCamera())
-        self.outlineActor.SetMapper(self.outlineMapper)
-        self.outlineActor.DrawXGridlinesOn()
-        self.outlineActor.DrawYGridlinesOn()
-        self.outlineActor.DrawZGridlinesOn()
-        self.renderer.AddActor(self.outlineActor)
-
-        # '#  % CREATE BALLOON INFO WIDGET'
-        # self.balloonRep = vtk.vtkBalloonRepresentation()
-        # self.balloonRep.SetBalloonLayoutToImageRight()
-        # self.balloonWidget = vtk.vtkBalloonWidget()
-        # self.balloonWidget.SetInteractor(self.Interactor)
-        # self.balloonWidget.SetRepresentation(self.balloonRep)
-        # self.balloonWidget.AddBalloon(self.pointcloud.vtkActor, self.pointcloud.cm_poly_data.GetPoints().GetPoint())
-
-    def delaunay(self, event):
-        """CREATE 3D GRID"""
-        if self.grid_created == 1:
-            if self.meshActor.GetVisibility() == 1:
-                self.meshActor.SetVisibility(False)
-            else:
-                self.meshActor.SetVisibility(True)
-            self.renderWindow.Render()
-            print("meshActor exists")
-        else:
-            self.grid_created = 1
-            self.cell_array = vtk.vtkCellArray()
-            self.boundary = self.pointcloud.cm_poly_data
-            self.boundary.SetPoints(self.pointcloud.cm_poly_data.GetPoints())
-            self.boundary.SetPolys(self.cell_array)
-
-            self.delaunay = vtk.vtkDelaunay2D()
-
-            self.delaunay.SetInputData(self.pointcloud.cm_poly_data)
-            self.delaunay.SetSourceData(self.boundary)
-
-            self.delaunay.Update()
-
-            self.meshMapper = vtk.vtkPolyDataMapper()
-            self.meshMapper.SetInputData(self.pointcloud.cm_poly_data)
-            self.meshMapper.SetColorModeToDefault()
-            self.meshMapper.SetScalarRange(self.xyz[:, 2].min(), self.xyz[:, 2].max())
-            self.meshMapper.SetScalarVisibility(1)
-            self.meshMapper.SetInputConnection(self.delaunay.GetOutputPort())
-            self.meshActor = vtk.vtkActor()
-            self.meshActor.SetMapper(self.meshMapper)
-            # self.meshActor.GetProperty().SetEdgeColor(0, 0, 1)
-            self.meshActor.GetProperty().SetInterpolationToFlat()
-            # self.meshActor.GetProperty().SetRepresentationToWireframe()
-
-            self.renderer.AddActor(self.meshActor)
-            self.renderWindow.Render()
-
-    def render_predicted(self, event):
-        print("self.predicted_xyz ==")
-        print(self.predicted_xyz)
-        try:
-            print("rendering predicted")
-            '  # %Render XYZ POINTS'
-            self.predicted_pointcloud = VtkPointCloudPredicted(self.predicted_xyz)
-            print ("ADDING POINTS")
-            for k in range(len(self.predicted_xyz)):
-                point = self.predicted_xyz[k]
-                self.predicted_pointcloud.addPoint(point)
-            print("ADDING ACTOR TO RENDER")
-            '# % ADD ACTOR TO RENDER'
-            self.renderer.AddActor(self.predicted_pointcloud.vtkActor)
-            self.predicted_pointcloud.vtkActor.GetProperty().SetPointSize(1)
-            '# % HIDE'
-            self.predicted_pointcloud.vtkActor.SetVisibility(False)
-
-            print("DOING delaunay_predicted")
-            self.delaunay_predicted()
-
-            self.renderWindow.Render()
-
-            print("DONE")
-        except AttributeError:
-            print("ERROR FAILED TO RENDER predicted_xyz")
-
-    def delaunay_predicted(self):
-        """CREATE GRID OF PREDICTED BATHYMETRY"""
-        try:
-            if self.predicted_meshActor.GetVisibility() == 1:
-                self.predicted_meshActor.SetVisibility(False)
-            else:
-                self.predicted_meshActor.SetVisibility(True)
-            self.renderWindow.Render()
-            print("predicted_meshActor exists")
-        except AttributeError:
-            try:
-                print("CREATING PREDICTED GRID")
-                self.cell_array = vtk.vtkCellArray()
-                self.predicted_boundary = self.predicted_pointcloud.poly_data
-                self.predicted_boundary.SetPoints(self.predicted_pointcloud.poly_data.GetPoints())
-                self.predicted_boundary.SetPolys(self.cell_array)
-
-                self.predicted_delaunay = vtk.vtkDelaunay2D()
-                if vtk.VTK_MAJOR_VERSION <= 5:
-                    self.predicted_delaunay.SetInput(self.predicted_pointcloud.poly_data.GetOutput())
-                    self.predicted_delaunay.SetSource(self.predicted_boundary)
-                else:
-                    self.predicted_delaunay.SetInputData(self.predicted_pointcloud.poly_data)
-                    self.predicted_delaunay.SetSourceData(self.predicted_boundary)
-
-                self.predicted_delaunay.Update()
-
-                print("MAKING MAPPER")
-                self.predicted_meshMapper = vtk.vtkPolyDataMapper()
-                self.predicted_meshMapper.SetInputData(self.predicted_pointcloud.poly_data)
-
-                print("MAKING LUT")
-                '# % CREATE COLOR LOOK UP TABLE'
-                self.predicted_lut = self.make_lookup_table()
-                self.predicted_meshMapper.SetLookupTable(self.predicted_lut)
-
-                print("SET MAPPER INPUTS")
-                '# % SET MAPPER INPUTS'
-                self.predicted_meshMapper.SetScalarRange(self.predicted_xyz[:, 2].min(), self.predicted_xyz[:, 2].max())
-                self.predicted_meshMapper.SetScalarVisibility(1)
-                self.predicted_meshMapper.SetInputConnection(self.predicted_delaunay.GetOutputPort())
-
-                '# % CREATE ACTOR'
-                self.predicted_meshActor = vtk.vtkActor()
-                self.predicted_meshActor.SetMapper(self.predicted_meshMapper)
-                self.predicted_meshActor.GetProperty().SetInterpolationToFlat()
-
-                '# % ADD MESH TO RENDER'
-                self.renderer.AddActor(self.predicted_meshActor)
-                self.renderWindow.Render()
-            except AttributeError:
-                print("FAILED ON CREATING PREDICTED")
-
-    def make_lookup_table(self):
-        """
-        Make a lookup table using vtkColorSeries.
-        :return: An indexed lookup table.
-        """
-        '# % SET UPPER AND LOWER VALUES'
-        a = self.xyz[:, 2].min()
-        b = self.xyz[:, 2].max()
-
-        '# % CREATE LUT'
-        lut = vtk.vtkColorTransferFunction()
-
-        '#% SET COLOR BANDS (GREYSCALE)'
-        # % NB. FORMAT:: VALUE THEN RGB CODE (THREE NUMBERS)
-        lut.AddRGBPoint(a, self.predicted_color_min, self.predicted_color_min, self.predicted_color_min)
-        lut.AddRGBPoint(b, self.predicted_color_max, self.predicted_color_max, self.predicted_color_max)
-        return lut
-
-    def set_point_size(self, value):
-        self.size = float(self.size_slider.GetValue())
-        self.pointcloud.vtkActor.GetProperty().SetPointSize(self.size)
-        self.pointcloud.vtkActor.Modified()
-        self.renderWindow.Render()
-        return
-
-    def set_z_scale(self, value):
-        """RESCALE THE Z-AXIS OF THE 3D PLOT"""
-
-        '#% GET THE NEW SCALE VALUE'
-        self.z_scale = float(self.z_scale_slider.GetValue())
-
-        '# % REPLACE CURRENT RENDER WITH NEW DATA'
-        self.re_render()
-
-        self.pointcloud.vtkActor.Modified()
-        self.renderWindow.Render()
-        return
-
-    def set_x_scale(self, value):
-        """RESCALE THE Z-AXIS OF THE 3D PLOT"""
-
-        '#% GET THE NEW SCALE VALUE'
-        self.x_scale = float(self.x_scale_slider.GetValue())
-
-        '# % REPLACE CURRENT RENDER WITH NEW DATA'
-        self.re_render()
-
-        self.pointcloud.vtkActor.Modified()
-        self.renderWindow.Render()
-        return
-
-    def set_y_scale(self, value):
-        """RESCALE THE Z-AXIS OF THE 3D PLOT"""
-
-        '#% GET THE NEW SCALE VALUE'
-        self.y_scale = float(self.y_scale_slider.GetValue())
-
-        '# % REPLACE CURRENT RENDER WITH NEW DATA'
-        self.re_render()
-
-        self.pointcloud.vtkActor.Modified()
-        self.renderWindow.Render()
-        return
-
-    def predicted_min(self, value):
-        """RESCALE THE PREDICTED GRID COLOR SCALE"""
-        try:
-            '#% GET THE NEW SCALE VALUE'
-            self.predicted_color_min = float(self.predicted_min_color_slider.GetValue())
-            self.new_lut = self.make_lookup_table()
-
-            self.predicted_meshMapper.SetLookupTable(self.new_lut)
-
-            self.renderWindow.Render()
-        except AttributeError:
-            print("ERROR IN predicted_min")
-            pass
-        return
-
-    def predicted_max(self, value):
-        """RESCALE THE PREDICTED GRID COLOR SCALE"""
-        try:
-            '#% GET THE NEW SCALE VALUE'
-            self.predicted_color_max = float(self.predicted_max_color_slider.GetValue())
-
-            self.new_lut = self.make_lookup_table()
-
-            self.predicted_meshMapper.SetLookupTable(self.new_lut)
-
-            self.renderWindow.Render()
-        except AttributeError:
-            print("ERROR IN predicted_max")
-            pass
-        return
-
-    def rubber_picker(self):
-        print("current style = %s" % self.current_style)
-
-        if self.current_style is 'rubber_band':
-            '# % REMOVE THE CURRENT HIGHLIGHT ACTOR (IF THERE IS ONE) FROM SCREEN'
-            if self.rubber_style.selected_actor:
-                self.renderer.RemoveActor(self.rubber_style.selected_actor)
-                del self.rubber_style.selected_actor
-
-            print('setting style as base_style')
-            self.Interactor.SetInteractorStyle(self.base_style)
-            self.current_style = str('base_style')
-
-        else:
-
-            print('setting style as rubber_band')
-            self.area_picker = vtk.vtkAreaPicker()
-            self.Interactor.SetPicker(self.area_picker)
-            self.rubber_style = RubberBand(self.renderWindow, self.renderer, self.pointcloud, self.Interactor,
-                                           self.area_picker, self.cm)
-            self.rubber_style.SetAutoAdjustCameraClippingRange(False)
-            self.rubber_style.AutoAdjustCameraClippingRangeOff()
-            self.Interactor.SetInteractorStyle(self.rubber_style)
-            self.current_style = str('rubber_band')
-
-        self.re_render()
-
-        return
-
-    def delete_selected(self):
-        """CREATES A NEW NUMPY ARRAY of the cm FILE WITH SELECTED NODES REMOVED"""
-        print("Deleting")
-        try:
-            '# % DELETE SELECTED VALUES'
-            self.selected_cm_line_number = vtk_to_numpy(
-                                    self.rubber_style.selected.GetPointData().GetArray("cm_line_number")).astype(int)
-            self.new_cm = np.delete(self.cm, self.selected_cm_line_number, 0)
-            self.cm = self.new_cm
-
-            '# % REPLACE CURRENT RENDER WITH NEW DATA'
-            self.renderer.RemoveActor(self.rubber_style.selected_actor)
-            self.re_render()
-
-            '# % UPDATE RENDER'
-            self.renderWindow.Render()
-
-        except AttributeError:
-            print("attr error")
-            pass
-
-    def set_flag(self, event):
-        """SETS FLAG FOR SELECTED NODES"""
-        print("SETTING FLAG")
-        try:
-            '# % DELETE SELECTED VALUES'
-            self.selected_cm_line_number = vtk_to_numpy(
-                                    self.rubber_style.selected.GetPointData().GetArray("cm_line_number")).astype(int)
-
-            '# % CLONE CURRENT cm file'
-            self.new_cm = np.copy(self.cm)
-
-            '# %SET FLAG AS 1 FOR ALL SELECTED NODES'
-            flag_column_index = np.shape(self.cm)[1]
-            for x in range(len(self.selected_cm_line_number)):
-                index = self.selected_cm_line_number[x]  # % GET INDEX VALUE
-                self.new_cm[index, 4] = 1  # % INSERT FLAG IN COL 1
-
-            '# % REMOVE SELECTED ACTOR'
-            self.renderer.RemoveActor(self.rubber_style.selected_actor)
-
-            '# % DRAW FLAGGED ACTOR'
-            self.rubber_style.flagged_mapper = vtk.vtkDataSetMapper()
-            self.rubber_style.flagged_actor = vtk.vtkActor()
-            self.rubber_style.flagged_actor.SetMapper(self.rubber_style.flagged_mapper)
-            self.rubber_style.flagged_mapper.SetInputData(self.rubber_style.selected)
-            self.rubber_style.flagged_actor.GetMapper().ScalarVisibilityOff()
-            self.rubber_style.flagged_actor.GetProperty().SetColor(0, 0, 0)  # (R, G, B)
-            self.rubber_style.flagged_actor.GetProperty().SetPointSize(10)
-            self.renderer.AddActor(self.rubber_style.flagged_actor)
-
-            '# % REPLACE CURRENT RENDER WITH NEW DATA'
-            self.re_render()
-
-            '# % UPDATE LIVE RENDER'
-            self.renderWindow.Render()
-
-        except AttributeError:
-            print("attr error")
-            pass
-
-    def save_cm(self, event):
-        """# %SET OUTPUT FILE NAME AND DIR"""
-        save_file_dialog = wx.FileDialog(self, "Save edited .cm file", "", "", ".cm file (*.cm)|*.cm",
-                                         wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        if save_file_dialog.ShowModal() == wx.ID_CANCEL:
-            return  # %THE USER CHANGED THEIR MIND
-
-        '# %SAVE TO DISC'
-        outputfile = save_file_dialog.GetPath()
-        np.savetxt(outputfile, self.cm, delimiter=" ")
-
-    def toggle(self, event):
-        """# %Toogle Display (depth or difference)"""
-        # print(self.difference_xyz)
-        # self.pointcloud.cm_poly_data.GetPointData().SetActiveScalars('DIFF')
-        # self.pointcloud.mapper.SetScalarRange(0.0, 0.001)
-        # self.renderWindow.Render()
-        if self.pointcloud.cm_poly_data.GetPointData().GetScalars().GetName() == 'Z':
-            print("currently Z")
-            self.pointcloud.cm_poly_data.GetPointData().SetActiveScalars('DIFF')
-            # self.pointcloud.mapper.SetScalarRange(self.difference_xyz[:, 2].min(), self.difference_xyz[:, 2].max())
-            self.pointcloud.mapper.SetScalarRange(0.0, 0.1)
-        else:
-            print("currently DIFF")
-            self.pointcloud.cm_poly_data.GetPointData().SetActiveScalars('Z')
-            self.pointcloud.mapper.SetScalarRange(self.xyz[:, 2].min(), self.xyz[:, 2].max())
-        self.renderWindow.Render()
-
-    def re_render(self):
-        """
-        # % RE RENDER 3D POINTS AFTER REMOVING SELECTION
-        """
-        print("re rendering")
-        self.renderer.RemoveActor(self.pointcloud.vtkActor)
-        del self.pointcloud.vtkActor
-
-        self.xyz_input = self.cm[:, 1:4]
-        self.xyz = np.divide(self.xyz_input, (1.0/self.x_scale, 1.0/self.y_scale, 10000.0/self.z_scale))  # % DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X&Z
-        del self.xyz_input
-        self.xyz_cm_id = self.cm[:, 0].astype(int)  # % GET CM FILE IDs
-        self.xyz_width = self.cm.shape[1]
-        self.xyz_meta_data = self.cm[:, 4:self.xyz_width]
-        self.xyz_point_flags = np.zeros(shape=(1, len(self.xyz)))
-        self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz)+1))
-
-        '  # %Render XYZ POINTS'
-        del self.pointcloud
-        self.pointcloud = VtkPointCloud(self.xyz, self.difference_xyz)
-        for k in range(len(self.xyz)):
-            point = self.xyz[k]
-            xyz_cm_id = self.xyz_cm_id[k]
-            xyz_cm_line_number = self.xyz_cm_line_number[k]
-            if self.difference_xyz is not None:
-                difference_xyz = self.difference_xyz[k]
-            else:
-                difference_xyz = np.zeros_like(point)
-            self.pointcloud.addPoint(point, xyz_cm_id, xyz_cm_line_number, difference_xyz)
-
-        self.renderer.AddActor(self.pointcloud.vtkActor)
-        self.set_point_size(float(self.size_slider.GetValue()))
-
-        '#% CHECK IF GRID ACTOR IS ON'
-        if self.grid_created == 1:
-            self.grid_created = 0
-            self.renderer.AddActor(self.meshActor)
-
-        '#% RESCALE THE AXIS OUTLINE'
-        self.outlineActor.SetBounds(self.xyz[:, 0].min(), self.xyz[:, 0].max(),
-                                    self.xyz[:, 1].min(), self.xyz[:, 1].max(),
-                                    self.xyz[:, 2].min(), self.xyz[:, 2].max())
-
-        '# % SET ACTIVE CAM'
-        self.renderer.SetActiveCamera(self.cam)
-        self.set_cam()
-        self.renderWindow.Render()
-        print("FINISHED")
-        # self.Interactor.RemoveObservers('KeyPressEvent')
-        # self.Interactor.RemoveObservers('CharEvent')
-
-    def keyPressEvent(self, event, obj):
-        key = self.Interactor.GetKeyCode()
-        # key = self.Interactor.GetKeySym()
-
-        '''# %ACTIVATE POINT PICKER'''
-        if key == 'r':
-            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            self.get_cam()
-            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            self.rubber_picker()
-
-        if key == 'd':
-            self.get_cam()
-            self.delete_selected()
-            self.set_cam()
-
-        if key == 'c':
-            self.set_cam()
-
-        self.re_render()
-
-    # def middleButtonPressEvent(self, obj, event):
-    #     print("Middle Button pressed")
-    #     self.OnMiddleButtonDown()
-    #     return
-    #
-    # def middleButtonReleaseEvent(self, obj, event):
-    #     print("Middle Button released")
-    #     self.OnMiddleButtonUp()
-    #     return
-    def get_cam(self):
-        print("!!!!!!!")
-        print("get cam")
-        print("!!!!!!!!")
-        self.focal_point = self.cam.GetFocalPoint()
-        self.positon = self.cam.GetPosition()
-        self.view_up = self.cam.GetViewUp()
-        self.view_angle = self.cam.GetViewAngle()
-        self.parallel_projection = self.cam.GetParallelProjection()
-        self.parallel_scale = self.cam.GetParallelScale()
-        self.clip = self.cam.GetClippingRange()
-        print(self.focal_point)
-        print(self.positon)
-        print(self.view_up)
-        print(self.view_angle)
-        print(self.parallel_projection)
-        print(self.parallel_scale)
-        print(self.clip)
-
-    def set_cam(self):
-        print("##########")
-        print("set_cam")
-        print("##########")
-        print(self.focal_point)
-        print(self.positon)
-        print(self.view_up)
-        print(self.view_angle)
-        print(self.parallel_projection)
-        print(self.parallel_scale)
-        print(self.clip)
-        self.cam.SetFocalPoint(self.focal_point)
-        self.cam.SetPosition(self.positon)
-        self.cam.SetViewUp(self.view_up)
-        self.cam.SetViewAngle(self.view_angle)
-        self.cam.SetParallelProjection(self.parallel_projection)
-        self.cam.SetParallelScale(self.parallel_scale)
-        self.cam.SetClippingRange(self.clip)
-        return
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class VtkPointCloud:
-    def __init__(self, xyz, xyz_difference, maxNumPoints=10e7):
-        """CREATE vtk PointCloud (XYZ SCATTER PLOT OF BATHYMETRY DATA"""
-
-        '# %INITIALISE POINT DATA'
-        self.xyz = xyz  # % THIS IS THE XYZ DATA
-        self.xyz_difference = xyz_difference  # % THIS IS THE XYZ WITH Z = DIFFERENCE BETWEEN OBS && PREDICTED
-        self.maxNumPoints = maxNumPoints
-        '# %CREATE vtkPolyData OBJECT'
-        self.cm_poly_data = vtk.vtkPolyData()
-        self.xyz_points = vtk.vtkPoints()
-        self.cm_poly_data.SetPoints(self.xyz_points)
-
-        '# %CREATE vtkPolyData VERTICES'
-        self.xyz_cells = vtk.vtkCellArray()
-        self.cm_poly_data.SetVerts(self.xyz_cells)
-        # self.xyz_cells.SetName('XYArray')
-
-        '# %CREATE vtkPolyData SCALAR VALUES'
-
-        '# % SCALAR 1 = cm file line number - This is used for numpy array data manipulation'
-        self.cm_line_number = vtk.vtkDoubleArray()
-        self.cm_line_number.SetName('cm_line_number')
-        self.cm_poly_data.GetPointData().AddArray(self.cm_line_number)
-
-        '# % SCALAR 2 = cm file id'
-        self.cm_id = vtk.vtkDoubleArray()
-        self.cm_id.SetName('cm_id')
-        self.cm_poly_data.GetPointData().AddArray(self.cm_id)
-
-        '# % SCALAR 3 = DEPTH'
-        self.xyz_depth = vtk.vtkDoubleArray()
-        self.xyz_depth.SetName('Z')
-        self.cm_poly_data.GetPointData().AddArray(self.xyz_depth)
-        self.cm_poly_data.GetPointData().SetScalars(self.xyz_depth)
-        self.cm_poly_data.GetPointData().SetActiveScalars('Z')
-
-        '# % SCALAR 4 = DIFFERENCE (PREDICTED-OBSERVED DEPTHS'
-        self.diff = vtk.vtkDoubleArray()
-        self.diff.SetName('DIFF')
-        self.cm_poly_data.GetPointData().AddArray(self.diff)
-
-        # OLD METHOD~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        '# % SET COLOR MAPPER'
-        self.mapper = vtk.vtkPolyDataMapper()
-        self.mapper.SetInputData(self.cm_poly_data)
-        self.mapper.SetColorModeToDefault()
-        self.mapper.SetScalarRange(self.xyz[:, 2].min(), self.xyz[:, 2].max())
-        self.mapper.SetScalarVisibility(1)
-        self.vtkActor = vtk.vtkActor()
-        self.vtkActor.SetMapper(self.mapper)
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        '# % CREATE ACTOR TO BE ADDED TO RENDER'
-        self.vtkActor = vtk.vtkActor()
-        self.vtkActor.SetMapper(self.mapper)
-
-    def addPoint(self, point, xyz_cm_id, xyz_cm_line_number, difference_xyz):
-
-        if self.xyz_points.GetNumberOfPoints() < self.maxNumPoints:
-            pointId = self.xyz_points.InsertNextPoint(point[:])
-            self.xyz_depth.InsertNextValue(point[2])
-            self.xyz_cells.InsertNextCell(1)
-            self.xyz_cells.InsertCellPoint(pointId)
-            self.cm_id.InsertNextValue(xyz_cm_id)
-            self.cm_line_number.InsertNextValue(xyz_cm_line_number)
-            self.diff.InsertNextValue(difference_xyz[2])
-        else:
-            print("ERROR: MORE THAN 10e6 POINTS IN FILE")
-            return
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class VtkPointCloudPredicted:
-    def __init__(self, xyz, maxNumPoints=10e7):
-        """CREATE vtk PointCloud (XYZ SCATTER PLOT OF BATHYMETRY DATA"""
-        print("STARTING  VtkPointCloudPredicted")
-        '# %INITIALISE POINT DATA'
-        self.xyz = xyz  # % THIS IS THE XYZ DATA
-        self.maxNumPoints = maxNumPoints
-
-        print("CREATE vtkPolyData OBJECT")
-        '# %CREATE vtkPolyData OBJECT'
-        self.poly_data = vtk.vtkPolyData()
-        self.xyz_points = vtk.vtkPoints()
-        self.poly_data.SetPoints(self.xyz_points)
-
-        print("CREATE vtkPolyData VERTICES")
-        '# %CREATE vtkPolyData VERTICES'
-        self.xyz_cells = vtk.vtkCellArray()
-        self.poly_data.SetVerts(self.xyz_cells)
-
-        # % NB. SCALAR VALUES ARE INITIALISED HERE AND THEN THE VALUES ARE ADDED in addPoint
-        print("CREATE SCALAR")
-        '# % SCALAR 1 = DEPTH'
-        self.xyz_depth = vtk.vtkDoubleArray()
-        self.xyz_depth.SetName('Z')
-        self.poly_data.GetPointData().AddArray(self.xyz_depth)
-        self.poly_data.GetPointData().SetScalars(self.xyz_depth)
-        self.poly_data.GetPointData().SetActiveScalars('Z')
-
-        #  %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # % LUT TABLE
-        print("CREATE LUT")
-        self.lut = self.make_lookup_table()
-        self.mapper = vtk.vtkPolyDataMapper()
-        self.mapper.SetLookupTable(self.lut)
-        self.mapper.SelectColorArray('Z')
-        #  %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        print("CREATE SET MAPPER STUFF")
-        self.mapper.SetScalarRange(self.xyz[:, 2].min(), self.xyz[:, 2].max())
-        self.mapper.SetInputData(self.poly_data)
-        self.mapper.SetScalarModeToUsePointFieldData()
-
-        # % CREATE ACTOR
-        self.vtkActor = vtk.vtkActor()
-        self.vtkActor.SetMapper(self.mapper)
-
-    def addPoint(self, point):
-        if self.xyz_points.GetNumberOfPoints() < self.maxNumPoints:
-            pointId = self.xyz_points.InsertNextPoint(point[:])
-            self.xyz_depth.InsertNextValue(point[2])
-            self.xyz_cells.InsertNextCell(1)
-            self.xyz_cells.InsertCellPoint(pointId)
-        else:
-            print("ERROR: MORE THAN 10e8 POINTS IN FILE")
-            return
-
-    def make_lookup_table(self):
-        """
-        Make a lookup table using vtkColorSeries.
-        :return: An indexed lookup table.
-        """
-        # # Make the lookup table.
-        # colorSeries = vtk.vtkColorSeries()
-        # # # Select a color scheme.
-        # colorSeriesEnum = colorSeries.BREWER_DIVERGING_BROWN_BLUE_GREEN_9
-        # # # colorSeriesEnum = colorSeries.BREWER_DIVERGING_SPECTRAL_10
-        # # # colorSeriesEnum = colorSeries.BREWER_DIVERGING_SPECTRAL_3
-        # # # colorSeriesEnum = colorSeries.BREWER_DIVERGING_PURPLE_ORANGE_9
-        # # colorSeriesEnum = colorSeries.BREWER_SEQUENTIAL_BLUE_PURPLE_9
-        # # # colorSeriesEnum = colorSeries.BREWER_SEQUENTIAL_BLUE_GREEN_9
-        # # # colorSeriesEnum = colorSeries.BREWER_QUALITATIVE_SET3
-        # # # colorSeriesEnum = colorSeries.CITRUS
-        # colorSeries.SetColorScheme(colorSeriesEnum)
-        # lut = vtk.vtkLookupTable()
-        # colorSeries.BuildLookupTable(lut)
-        # lut.SetNanColor(1, 0, 0, 1)
-
-        a = self.xyz[:, 2].min()
-        b = self.xyz[:, 2].max()
-        lut = vtk.vtkColorTransferFunction()
-        # lut.AddRGBPoint(a, 0.0, 0.0, 1.0)
-        # lut.AddRGBPoint(a + (b - a) / 4, 0.0, 0.5, 0.5)
-        # lut.AddRGBPoint(a + (b - a) / 2, 0.0, 1.0, 0.0)
-        # lut.AddRGBPoint(b - (b - a) / 4, 0.5, 0.5, 0.0)
-        # lut.AddRGBPoint(b, 1.0, 0.0, 0.0)
-
-        # % NB. FORMAT:: VALUE THEN RGB CODE (THREE NUMBERS)
-        lut.AddRGBPoint(a, 0.25, 0.25, 0.25)
-        lut.AddRGBPoint(b, 0.75, 0.75, 0.75)
-        return lut
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-class RubberBand(vtk.vtkInteractorStyleRubberBandPick):
-    def __init__(self, renderWindow, renderer, pointcloud, interactor, area_picker, cm):
-        print("entering rubber band mode")
-        self.cm = cm
-        self.renderWindow = renderWindow
-        self.renderer = renderer
-        self.pointcloud = pointcloud
-        self.Interactor = interactor
-        self.selected_mapper = vtk.vtkDataSetMapper()
-        self.selected_actor = vtk.vtkActor()
-        self.selected_actor.SetMapper(self.selected_mapper)
-        self.area_picker = area_picker
-
-        '# % SET VTK OBSERVERS'
-        self.Interactor.AddObserver("LeftButtonPressEvent", self.leftButtonPressEvent)
-        self.Interactor.AddObserver("LeftButtonReleaseEvent", self.LeftButtonReleaseEvent)
-
-    def leftButtonPressEvent(self, obj, event):
-        print("LEFT BUTTON PRESSED")
-        self.OnLeftButtonDown()
-        '# % REMOVE THE CURRENT HIGHLIGHT ACTOR (IF THERE IS ONE) FROM SCREEN'
-        try:
-            self.renderer.RemoveActor(self.selected_actor)
-        except AttributeError:
-            pass
-        self.renderWindow.Render()
-
-    def LeftButtonReleaseEvent(self, obj, event):
-        print("LEFT BUTTON RELEASED")
-        self.OnLeftButtonUp()
-
-        self.frustum = self.area_picker.GetFrustum()
-
-        self.extract_geometry = vtk.vtkExtractGeometry()
-        self.extract_geometry.SetImplicitFunction(self.frustum)
-        self.extract_geometry.SetInputData(self.pointcloud.cm_poly_data)
-        self.extract_geometry.Update()
-
-        self.glyph_filter = vtk.vtkVertexGlyphFilter()
-        self.glyph_filter.SetInputConnection(self.extract_geometry.GetOutputPort())
-        self.glyph_filter.Update()
-
-        self.selected = self.glyph_filter.GetOutput()
-        self.p1 = self.selected.GetNumberOfPoints()
-        self.p2 = self.selected.GetNumberOfCells()
-        print("Number of points = %s" % self.p1)
-        print("Number of cells = %s" % self.p2)
-
-        '# % COLOR SELECTED POINTS RED'
-        self.selected_mapper.SetInputData(self.selected)
-        try:
-            self.selected_actor.GetProperty().SetPointSize(10)
-            self.selected_actor.GetProperty().SetColor(0, 0, 0)  # (R, G, B)
-            self.color_picked()
-        except AttributeError:
-            pass
-
-    def save_output(self):
-        """CREATES A NEW NUMPY ARRAY of the cm FILE WITH SELECTED NODES REMOVED"""
-        pass
-        # np.column_stack((self.selected_cm_ids, self.selected_xyz))
-
-    def color_picked(self):
-        try:
-            self.renderer.AddActor(self.selected_actor)
-            self.renderWindow.Render()
-        except AttributeError:
-            pass
-        # self.selected_actor.GetProperty().Get
-
-        # '# % CREATE ID FOR EACH SELECTED POINT'
-        # self.ids = vtk.vtkIdFilter()
-        # self.ids.SetInputData(self.selected)
-        # self.ids.SetIdsArrayName("Ids")  # % SET Id ARRAY NAME AS 'Ids'
-        # print("self.ids =")
-        # print(self.ids)
-        # print("")
-        #
-        # self.cell_ids = self.ids.GetCellIds()
-        # self.cell_ids = vtk_to_numpy(self.cells.GetArray('Ids'))
-
-
-        # print(self.cell_ids)
-        # print("")
-        #
-        # self.selected_frustrum = vtk.vtkExtractSelectedFrustum()
-        # self.selected_frustrum.SetFrustum(self.frustum)
-        # self.selected_frustrum.PreserveTopologyOff()
-        # self.selected_frustrum.SetInputConnection(self.ids.GetOutputPort())  # was grid?
-        # self.selected_frustrum.Update()
-        # self.ugrid = self.selected_frustrum.GetOutput()
-        # self.cells = self.ugrid.GetCellData()
-        #
-        # print("self.cells =")
-        # print(self.cells)
-        # print("")
-
-
-
-        # print("self.cell_ids =")
-        # print(self.cell_ids)
-        # print("")
-
-        # sys.Gmg.tdv.pointcloud.cm_poly_data.GetPoints().GetPoint(id)
-
-        # self.point_data
-        # self.ids = vtk.vtkIdTypeArray.SafeDownCast(self.selected.GetPointData().GetArray("OriginalIds"))
-        # print(self.ids)
-        # self.count = self.ids.GetTypedTuple()
-        # for i in range(self.ids.GetTypedTuple()):
-        #     print("Id %s : %s" % (i, self.ids.GetValue(i)))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
