@@ -18,7 +18,7 @@ class ThreeDimViewer(wx.Frame):
     """
     Three dimensional viewer for Py-cmeditor
     """
-    def __init__(self, parent, id, title, cm, xyz, xyz_cm_id, xyz_meta_data, xyz_point_flags,
+    def __init__(self, parent, id, title, cm, xyz, xyz_cm_id, xyz_meta_data,
                  xyz_cm_line_number, predicted_xyz, diff_xyz, difference_xyz, score_xyz):
         wx.Frame.__init__(self, None, wx.ID_ANY, '3D Viewer', size=(900, 700))
 
@@ -172,7 +172,6 @@ class ThreeDimViewer(wx.Frame):
         self.xyz = xyz
         self.xyz_cm_id = xyz_cm_id
         self.xyz_meta_data = xyz_meta_data
-        self.xyz_point_flags = xyz_point_flags
         self.xyz_cm_line_number = xyz_cm_line_number
         self.predicted_xyz = predicted_xyz
         self.diff_xyz = diff_xyz
