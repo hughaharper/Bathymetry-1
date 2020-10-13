@@ -1,23 +1,28 @@
 import vtk
 
+
 class VtkPointCloud:
+    """
+    DOC STRING
+    """
     def __init__(self, xyz, xyz_difference, xyz_score, maxNumPoints=10e7):
 
-        #INITIALISE POINT DATA
+        # INITIALISE POINT DATA
         self.xyz = xyz  # % THIS IS THE XYZ DATA
         self.xyz_difference = xyz_difference  # % THIS IS THE XYZ WITH Z = DIFFERENCE BETWEEN OBS && PREDICTED
         self.maxNumPoints = maxNumPoints
-        #CREATE vtkPolyData OBJECT
+
+        # CREATE vtkPolyData OBJECT
         self.cm_poly_data = vtk.vtkPolyData()
         self.xyz_points = vtk.vtkPoints()
         self.cm_poly_data.SetPoints(self.xyz_points)
 
-        #CREATE vtkPolyData VERTICES
+        # CREATE vtkPolyData VERTICES
         self.xyz_cells = vtk.vtkCellArray()
         self.cm_poly_data.SetVerts(self.xyz_cells)
         # self.xyz_cells.SetName('XYArray')
 
-        #CREATE vtkPolyData SCALAR VALUES
+        # CREATE vtkPolyData SCALAR VALUES
 
         # SCALAR 1 = cm file line number - This is used for numpy array data manipulation
         self.cm_line_number = vtk.vtkDoubleArray()
@@ -41,7 +46,7 @@ class VtkPointCloud:
         self.diff.SetName('DIFF')
         self.cm_poly_data.GetPointData().AddArray(self.diff)
 
-        # SCALAR 5 = DIFFERENCE (PREDICTED-OBSERVED) DEPTHS
+        # SCALAR 5 = ML SCORE
         self.score = vtk.vtkDoubleArray()
         self.score.SetName('SCORE')
         self.cm_poly_data.GetPointData().AddArray(self.score)
@@ -83,18 +88,18 @@ class VtkPointCloud:
 class VtkPointCloudPredicted:
     def __init__(self, xyz, maxNumPoints=10e7):
         print("STARTING  VtkPointCloudPredicted")
-        #INITIALISE POINT DATA
+        # INITIALISE POINT DATA
         self.xyz = xyz  # % THIS IS THE XYZ DATA
         self.maxNumPoints = maxNumPoints
 
         print("CREATE vtkPolyData OBJECT")
-        #CREATE vtkPolyData OBJECT
+        # CREATE vtkPolyData OBJECT
         self.poly_data = vtk.vtkPolyData()
         self.xyz_points = vtk.vtkPoints()
         self.poly_data.SetPoints(self.xyz_points)
 
         print("CREATE vtkPolyData VERTICES")
-        #CREATE vtkPolyData VERTICES
+        # CREATE vtkPolyData VERTICES
         self.xyz_cells = vtk.vtkCellArray()
         self.poly_data.SetVerts(self.xyz_cells)
 

@@ -6,13 +6,18 @@ import matplotlib as mpl
 mpl.use('WXAgg')
 import wx
 import wx.lib.agw.aui as aui
-import numpy as np
 import vtk
 from vtk.wx.wxVTKRenderWindowInteractor import wxVTKRenderWindowInteractor
 from vtk.util.numpy_support import vtk_to_numpy
 from rubber_band import RubberBand
 from point_clouds import VtkPointCloud
 from point_clouds import VtkPointCloudPredicted
+import math as m
+import numpy as np
+import shapely.speedups
+shapely.speedups.enable()
+import geopandas as gpd
+from pyproj import Transformer
 
 class ThreeDimViewer(wx.Frame):
     """
@@ -78,12 +83,12 @@ class ThreeDimViewer(wx.Frame):
 
         # ADD INTERACTOR WINDOW TO TOP BOX
         self.box_top = wx.BoxSizer(wx.VERTICAL)
-        self.box_top.Add(self.Interactor, 1, wx.ALIGN_CENTRE | wx.EXPAND)
+        self.box_top.Add(self.Interactor, 1, wx.EXPAND)
 
         # SET THE 3D MESH AXES SCALES
         self.x_scale = 1.0
         self.y_scale = 1.0
-        self.z_scale = 1.0
+        self.z_scale = 100.0
 
         # ADD MOUSE INTERACTION TOOLS ----------------------------------------------------------------------------------
 
@@ -108,7 +113,7 @@ class ThreeDimViewer(wx.Frame):
 
         # Z SCALE SIZER SLIDER
         self.z_scale_text = wx.StaticText(self.tdv_left_panel, -1, "Z-scale", style=wx.ALIGN_CENTRE)
-        self.z_scale_slider = wx.Slider(self.tdv_left_panel, value=1.0, minValue=1.0, maxValue=10.0,
+        self.z_scale_slider = wx.Slider(self.tdv_left_panel, value=100.0, minValue=1.0, maxValue=10000.0,
                                         size=(150, 20),
                                         style=wx.SL_HORIZONTAL)
         self.z_scale_slider.Bind(wx.EVT_SLIDER, self.set_z_scale)
@@ -169,7 +174,14 @@ class ThreeDimViewer(wx.Frame):
 
         # INITIALIZE OBJECTS FOR LATER ---------------------------------------------------------------------------------
         self.cm = cm
-        self.xyz = xyz
+
+        self.wgs84_xyz = xyz
+
+        converted_xy = self.convert_input_coords(xyz[:, 0:2])
+
+        self.xyz = np.column_stack((converted_xy, self.wgs84_xyz[:, 2]))
+        self.xyz_original = np.copy(self.xyz)
+
         self.xyz_cm_id = xyz_cm_id
         self.xyz_meta_data = xyz_meta_data
         self.xyz_cm_line_number = xyz_cm_line_number
@@ -210,6 +222,41 @@ class ThreeDimViewer(wx.Frame):
         # UPDATE AUI MANGER
         self.tdv_mgr.Update()
 
+    def convert_wgs_to_utm(self, lon, lat):
+        utm_band = str((m.floor((lon + 180) / 6) % 60) + 1)
+        if len(utm_band) == 1:
+            utm_band = '0' + utm_band
+        if lat >= 0:
+            epsg_code = '326' + utm_band
+        else:
+            epsg_code = '327' + utm_band
+        return epsg_code
+
+    def get_centeroid(self, arr):
+        length = arr.shape[0]
+        sum_x = np.sum(arr[:, 0])
+        sum_y = np.sum(arr[:, 1])
+        print(sum_x / length)
+        print(sum_y / length)
+        return sum_x / length, sum_y / length
+
+    def convert_input_coords(self, input_arr):
+        # 1.0 CONVERT INPUT XY INPUT A GEOPANDAS DATA FRAME
+        gpd_data = gpd.GeoDataFrame(geometry=gpd.points_from_xy(input_arr[:, 0], input_arr[:, 1]))
+
+        # 2.0 GET THE CENTROID POINT OF THE INPUT XY
+        input_lon_center, input_lat_center = self.get_centeroid(input_arr)
+
+        # 3.0 GET BEST UTM ZONE/EPSG CODE FOR CENTER COORDINATE PAIR
+        utm_code = self.convert_wgs_to_utm(input_lon_center, input_lat_center)
+
+        # 4.0 TRANSFORM THE COORDS TO UTM METERS
+        transformer = Transformer.from_crs("epsg:4326", "epsg:32608")
+        utm_coords = transformer.transform(input_arr[:, 1], input_arr[:, 0])
+
+        # 5.0 RETURN CONVERTED DATA
+        return np.column_stack((utm_coords[1], utm_coords[0]))
+
     def do_point_render(self):
         """
         RENDER 3D POINTS
@@ -221,8 +268,14 @@ class ThreeDimViewer(wx.Frame):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Render XYZ POINTS
         self.pointcloud = VtkPointCloud(self.xyz, self.difference_xyz, self.score_xyz)
+
         for k in range(len(self.xyz)):
             point = self.xyz[k]
+
+            point[0] *= self.x_scale
+            point[1] *= self.y_scale
+            point[2] *= self.z_scale
+
             xyz_cm_id = self.xyz_cm_id[k]
             xyz_cm_line_number = self.xyz_cm_line_number[k]
             score_xyz = self.score_xyz[k]
@@ -230,6 +283,8 @@ class ThreeDimViewer(wx.Frame):
                 difference_xyz = self.difference_xyz[k]
             else:
                 difference_xyz = np.zeros_like(point)
+
+            # NOW ADD THE POINT TO THE POINT CLOUD
             self.pointcloud.addPoint(point, xyz_cm_id, xyz_cm_line_number, difference_xyz, score_xyz)
 
         # ADD ACTOR TO RENDER
@@ -267,9 +322,9 @@ class ThreeDimViewer(wx.Frame):
         #  % CREATE XYZ OUTLINE AXES GRID
         self.outlineMapper = self.pointcloud.vtkActor.GetMapper()
         self.outlineActor = vtk.vtkCubeAxesActor()
-        self.outlineActor.SetBounds(self.xyz[:, 0].min()*self.x_scale, self.xyz[:, 0].max()*self.x_scale,
-                                    self.xyz[:, 1].min()*self.y_scale, self.xyz[:, 1].max()*self.y_scale,
-                                    self.xyz[:, 2].min()*self.z_scale, self.xyz[:, 2].max()*self.z_scale)
+        self.outlineActor.SetBounds(self.xyz[:, 0].min() * self.x_scale, self.xyz[:, 0].max() * self.x_scale,
+                                    self.xyz[:, 1].min() * self.y_scale, self.xyz[:, 1].max() * self.y_scale,
+                                    self.xyz[:, 2].min() * self.z_scale, self.xyz[:, 2].max() * self.z_scale)
 
         self.outlineActor.SetCamera(self.renderer.GetActiveCamera())
         self.outlineActor.SetMapper(self.outlineMapper)
@@ -522,31 +577,37 @@ class ThreeDimViewer(wx.Frame):
         """
         # RE RENDER 3D POINTS AFTER REMOVING SELECTION
         """
-        if self.current_style is 'base_style':
+        if self.current_style == 'base_style':
             # GET ACTIVE CAM POSITION
             # self.get_cam()
-
             print("re rendering")
+
             # REMOVE EXSISTING POINT CLOUD FROM THE RENDER AND MEMORY
             self.renderer.RemoveActor(self.pointcloud.vtkActor)
             del self.pointcloud.vtkActor
             del self.pointcloud
 
             # CREATE POINT DATA WITH NEW SCALING VALUES
-            # self.xyz = np.divide(self.cm[:, 1:4], (self.x_scale, self.y_scale, self.z_scale))
-            # self.difference_xyz = np.divide(self.diff_xyz, (self.x_scale, self.y_scale, self.z_scale))
+            self.xyz = np.multiply(self.xyz_original, (self.x_scale, self.y_scale, self.z_scale))
+            self.difference_xyz = np.multiply(self.diff_xyz, (self.x_scale, self.y_scale, self.z_scale))
 
             # CREATE THE POINT CLOUD VTK ACTOR
             self.pointcloud = VtkPointCloud(self.xyz, self.difference_xyz, self.score_xyz)
+
             for k in range(len(self.xyz)):
                 point = self.xyz[k]
+
                 xyz_cm_id = self.xyz_cm_id[k]
                 xyz_cm_line_number = self.xyz_cm_line_number[k]
+
                 score_xyz = self.score_xyz[k]
+
                 if self.difference_xyz is not None:
                     difference_xyz = self.difference_xyz[k]
                 else:
                     difference_xyz = np.zeros_like(point)
+
+                # NOW ADD THE DATA TO THE POINTCLOUD
                 self.pointcloud.addPoint(point, xyz_cm_id, xyz_cm_line_number, difference_xyz, score_xyz)
 
             # RENDER THE NEW POINT CLOUD
@@ -646,11 +707,11 @@ class ThreeDimViewer(wx.Frame):
             # CLONE CURRENT cm file
             self.new_cm = np.copy(self.cm)
 
-            #SET FLAG AS 1 FOR ALL SELECTED NODES
+            # SET FLAG AS 1 FOR ALL SELECTED NODES
             flag_column_index = np.shape(self.cm)[1]
             for x in range(len(self.selected_cm_line_number)):
                 index = self.selected_cm_line_number[x]  # % GET INDEX VALUE
-                self.new_cm[index, 4] = 1  # % INSERT FLAG IN COL 1
+                self.new_cm[index, 4] = 1  # % INSERT FLAG IN COL 4
 
             # REMOVE SELECTED ACTOR
             self.renderer.RemoveActor(self.rubber_style.selected_actor)
@@ -714,7 +775,7 @@ class ThreeDimViewer(wx.Frame):
         :return: None
         """
         print("current style = %s" % self.current_style)
-        if self.current_style is 'rubber_band':
+        if self.current_style == 'rubber_band':
             # REMOVE THE CURRENT HIGHLIGHT ACTOR (IF THERE IS ONE) FROM SCREEN
             if self.rubber_style.selected_actor:
                 self.renderer.RemoveActor(self.rubber_style.selected_actor)
