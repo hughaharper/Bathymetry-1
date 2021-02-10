@@ -19,4 +19,4 @@ gmt grdtrack -i1,2,3 ${cm_file} -Gpredicted.nc | awk '{
         }' > difference.xyz
 
 ## EXIT
-exit -1
+exit 0

@@ -278,7 +278,7 @@ class PyCMeditor(wx.Frame):
                                      tiles=None)
 
         # ADD SRTM15+ TILES
-        self.tiles = folium.TileLayer(tiles=self.cwd + '/../../../8-xyz-tiles/{z}/{x}/{y}.png',
+        self.tiles = folium.TileLayer(tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/8-xyz-tiles/{z}/{x}/{y}.png',
                                       name='SRTM15+V2.1', attr='SRTM15+V2.1', control=False)
         self.tiles.add_to(self.folium_map)
 
@@ -479,7 +479,7 @@ class PyCMeditor(wx.Frame):
                 if open_cm_dialogbox.regular_load_button is True:
                     self.zoom_level = 1
                 else:
-                    self.zoom_level = 6
+                    self.zoom_level = 8
 
                 # LOAD THE DATA
                 self.load_cm_file_as_cluster(bad_th, uncertain_th)
