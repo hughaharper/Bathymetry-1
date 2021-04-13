@@ -275,12 +275,23 @@ class PyCMeditor(wx.Frame):
                                      attr='map',
                                      no_wrap=True,
                                      name='map',
+                                     control_scale=True,
                                      tiles=None)
 
         # ADD SRTM15+ TILES
         self.tiles = folium.TileLayer(tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/8-xyz-tiles/{z}/{x}/{y}.png',
-                                      name='SRTM15+V2.1', attr='SRTM15+V2.1', control=False)
+                                      name='SRTM15+V2.1', attr='SRTM15+V2.1', overlay=True, control=True)
         self.tiles.add_to(self.folium_map)
+
+        self.regridded = folium.TileLayer(tiles='',  name='Regrid', attr='regridded', overlay=False, control=False)
+        self.regridded.add_to(self.folium_map)
+
+        # self.regridded_tiles = folium.TileLayer(
+        #     tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png',
+        #                               )
+        # self.regridded_tiles.add_to(self.folium_map)
+
+
 
         # TEMPORARY OVERLAY TILES FOR EXPERIMENTATION
 
@@ -291,6 +302,9 @@ class PyCMeditor(wx.Frame):
         # self.V2tiles = folium.TileLayer(tiles=self.cwd + '/topoN34W143/{z}/{x}/{y}.png',
         #                                 name='us_multi2_bathy', attr='us_multi2_bathy', control=False)
         # self.V2tiles.add_to(self.folium_map)
+        # self.regridded_tiles = folium.TileLayer(tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png',
+        #                              name='Regrid', attr='Regrid', overlay=True, control=True)
+        # self.regridded_tiles.add_to(self.folium_map)
 
         # LOAD DRAWING FUNCTIONALITY
         # importer=True,
@@ -382,9 +396,12 @@ class PyCMeditor(wx.Frame):
         self.button_flag_points_using_polygons = wx.Button(self.left_panel_top, -1, "Set flags", pos=(0, 220),
                                                 style=wx.ALIGN_CENTER)
 
-        # BUTTON NONE SAVE CM FILE TO DISC
+        # BUTTON NINE SAVE CM FILE TO DISC
         self.button_save_cm_file = wx.Button(self.left_panel_top, -1, "Save .cm", pos=(0, 220),
                                                 style=wx.ALIGN_CENTER)
+
+        # BUTTON TEN: REGRID CURRENT DATA
+        self.button_regrid = wx.Button(self.left_panel_top, -1, "Regrid", pos=(0, 220), style=wx.ALIGN_CENTER)
 
         self.file_list_ctrl = wx.ListCtrl(self.left_panel_bottom, -1, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.list_item_selected, self.file_list_ctrl)
@@ -399,10 +416,11 @@ class PyCMeditor(wx.Frame):
         # self.box_right_bottom_sizer.Add(self.canvas, 1, wx.ALL | wx.ALIGN_RIGHT | wx.EXPAND, border=2)
 
         # CREATE LAYER BUTTON BOX
-        self.left_box_top_sizer = wx.FlexGridSizer(cols=1, rows=9, hgap=8, vgap=8)
+        self.left_box_top_sizer = wx.FlexGridSizer(cols=1, rows=10, hgap=8, vgap=8)
         self.left_box_top_sizer.AddMany([self.button_one, self.button_two, self.button_three, self.button_four,
-                                         self.button_five, self.button_export_polygons, self.button_import_polygons,
-                                         self.button_flag_points_using_polygons, self.button_save_cm_file])
+                                         self.button_five, self.button_regrid, self.button_export_polygons,
+                                         self.button_import_polygons, self.button_flag_points_using_polygons,
+                                         self.button_save_cm_file])
 
         # CREATE FILE LIST BOX
         self.left_box_bottom_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -422,6 +440,8 @@ class PyCMeditor(wx.Frame):
         self.button_three.Bind(wx.EVT_BUTTON, self.open_predicted_cm_file)
         self.button_four.Bind(wx.EVT_BUTTON, self.plot_three_dim)
         self.button_five.Bind(wx.EVT_BUTTON, self.get_predicted)
+        self.button_save_cm_file.Bind(wx.EVT_BUTTON, self.save_cm_file)
+        self.button_regrid.Bind(wx.EVT_BUTTON, self.regrid)
         self.button_export_polygons.Bind(wx.EVT_BUTTON, self.on_wx_export_button)
         self.button_import_polygons.Bind(wx.EVT_BUTTON, self.on_wx_import_button)
         self.button_flag_points_using_polygons.Bind(wx.EVT_BUTTON, self.flag_points_using_polygons)
@@ -678,11 +698,27 @@ class PyCMeditor(wx.Frame):
             # LOAD DIFFERENCE CM
             self.diff_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
 
-            # DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X & Z
+            # DIVIDE TO MAKE THE Z-SCALE A SIMILAR ORDER OF MAGNITUDE AS X & Y
             self.difference_xyz = np.divide(self.diff_xyz, (1.0, 1.0, 10000.0))
+
         except AttributeError:
             print("ERROR: no .cm file loaded")
         self.busyDlg = None
+
+    def regrid(self, event):
+        # STEP 1: WRITE OUT TMP CM FILE
+        np.savetxt('current_cm.tmp', self.cm[:, 0:8], fmt="%1d %1.6f %1.6f %1.1f %1d %1d %1d %1.1f")
+
+        # RUN BASH SCRIPT FOR REGRIDDING
+        subprocess.run(["bash", self.cwd + '/' + 'regrid.sh', self.cwd + '/' + 'current_cm.tmp'])
+
+        # LOAD NEW GRID
+        self.regridded.tiles = '/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png'
+        self.regridded.overlay = True
+        self.regridded.control = True
+        # SAVE AND DISPLAY THE NEW FOLIUM MAP (INCLUDING THE .cm FILE)
+        self.folium_map.save("Py-CMeditor.html")
+        self.browser.Reload()
 
     def on_wx_import_button(self, event):
         """
