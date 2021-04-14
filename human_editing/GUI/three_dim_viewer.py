@@ -1,7 +1,3 @@
-"""
-Three dimensional viewer for Py-cmeditor
-"""
-
 import matplotlib as mpl
 mpl.use('WXAgg')
 import wx
@@ -19,13 +15,18 @@ shapely.speedups.enable()
 import geopandas as gpd
 from pyproj import Transformer
 
+"""
+Three dimensional viewer for Py-Cmeditor
+"""
+
+
 class ThreeDimViewer(wx.Frame):
     """
-    Three dimensional viewer for Py-cmeditor
+    Three dimensional viewer for Py-Cmeditor
     """
     def __init__(self, parent, id, title, cm, xyz, xyz_cm_id, xyz_meta_data,
-                 xyz_cm_line_number, predicted_xyz, diff_xyz, difference_xyz, score_xyz):
-        wx.Frame.__init__(self, None, wx.ID_ANY, '3D Viewer', size=(900, 700))
+                 xyz_cm_line_number, predicted_xyz, difference_xyz, score_xyz):
+        wx.Frame.__init__(self, None, wx.ID_ANY, '3D Viewer', size=(1200, 900))
 
         # START AUI WINDOW MANAGER
         self.tdv_mgr = aui.AuiManager()
@@ -88,7 +89,7 @@ class ThreeDimViewer(wx.Frame):
         # SET THE 3D MESH AXES SCALES
         self.x_scale = 1.0
         self.y_scale = 1.0
-        self.z_scale = 100.0
+        self.z_scale = 1.0
 
         # ADD MOUSE INTERACTION TOOLS ----------------------------------------------------------------------------------
 
@@ -113,7 +114,7 @@ class ThreeDimViewer(wx.Frame):
 
         # Z SCALE SIZER SLIDER
         self.z_scale_text = wx.StaticText(self.tdv_left_panel, -1, "Z-scale", style=wx.ALIGN_CENTRE)
-        self.z_scale_slider = wx.Slider(self.tdv_left_panel, value=100.0, minValue=1.0, maxValue=10000.0,
+        self.z_scale_slider = wx.Slider(self.tdv_left_panel, value=1.0, minValue=1.0, maxValue=100000.0,
                                         size=(150, 20),
                                         style=wx.SL_HORIZONTAL)
         self.z_scale_slider.Bind(wx.EVT_SLIDER, self.set_z_scale)
@@ -153,14 +154,14 @@ class ThreeDimViewer(wx.Frame):
         # PREDICTED MIN
         self.predicted_min_text = wx.StaticText(self.tdv_left_panel, -1, "Predicted Min", style=wx.ALIGN_CENTRE)
         self.predicted_min_color_slider = wx.Slider(self.tdv_left_panel, value=25, minValue=0,
-                                                    maxValue=100, size=(150, 20),
+                                                    maxValue=255, size=(150, 20),
                                                     style=wx.SL_HORIZONTAL)
         self.predicted_min_color_slider.Bind(wx.EVT_SLIDER, self.predicted_min)
 
         # PREDICTED MAX
         self.predicted_max_text = wx.StaticText(self.tdv_left_panel, -1, "Predicted Max", style=wx.ALIGN_CENTRE)
-        self.predicted_max_color_slider = wx.Slider(self.tdv_left_panel, value=65, minValue=0,
-                                                    maxValue=100, size=(150, 20), style=wx.SL_HORIZONTAL)
+        self.predicted_max_color_slider = wx.Slider(self.tdv_left_panel, value=165, minValue=0,
+                                                    maxValue=255, size=(150, 20), style=wx.SL_HORIZONTAL)
         self.predicted_max_color_slider.Bind(wx.EVT_SLIDER, self.predicted_max)
 
         # ADD BUTTONS ETC TO LEFT BOX
@@ -177,20 +178,22 @@ class ThreeDimViewer(wx.Frame):
 
         self.wgs84_xyz = xyz
 
+        # CONVERT LAT LONG TO UTM SO WE CAN PLOT IN METERS
         converted_xy = self.convert_input_coords(xyz[:, 0:2])
-
         self.xyz = np.column_stack((converted_xy, self.wgs84_xyz[:, 2]))
-        self.xyz_original = np.copy(self.xyz)
+        self.xyz_original = np.copy(self.xyz)  # REQUIRED FOR INTERACTIVE RESCALING
 
+        # ASSIGN META DATA TO OBJECTS
         self.xyz_cm_id = xyz_cm_id
         self.xyz_meta_data = xyz_meta_data
         self.xyz_cm_line_number = xyz_cm_line_number
         self.predicted_xyz = predicted_xyz
-        self.diff_xyz = diff_xyz
+        self.predicted_xyz_original = np.copy(self.predicted_xyz)  # REQUIRED FOR INTERACTIVE RESCALING
         self.difference_xyz = difference_xyz
+        self.difference_xyz_original = np.copy(self.difference_xyz)  # REQUIRED FOR INTERACTIVE RESCALING
         self.score_xyz = score_xyz
         self.predicted_color_min = 0.25
-        self.predicted_color_max = 0.65
+        self.predicted_color_max = 1.65
 
         # RENDER THE .cm POINT DATA ------------------------------------------------------------------------------------
         self.do_point_render()
@@ -230,15 +233,14 @@ class ThreeDimViewer(wx.Frame):
             epsg_code = '326' + utm_band
         else:
             epsg_code = '327' + utm_band
+        print(epsg_code)
         return epsg_code
 
     def get_centeroid(self, arr):
         length = arr.shape[0]
         sum_x = np.sum(arr[:, 0])
         sum_y = np.sum(arr[:, 1])
-        print(sum_x / length)
-        print(sum_y / length)
-        return sum_x / length, sum_y / length
+        return sum_x/length, sum_y/length
 
     def convert_input_coords(self, input_arr):
         # 1.0 CONVERT INPUT XY INPUT A GEOPANDAS DATA FRAME
@@ -249,13 +251,14 @@ class ThreeDimViewer(wx.Frame):
 
         # 3.0 GET BEST UTM ZONE/EPSG CODE FOR CENTER COORDINATE PAIR
         utm_code = self.convert_wgs_to_utm(input_lon_center, input_lat_center)
+        epsg_out = ("epsg:%s" % utm_code)
 
         # 4.0 TRANSFORM THE COORDS TO UTM METERS
-        transformer = Transformer.from_crs("epsg:4326", "epsg:32608")
+        transformer = Transformer.from_crs("epsg:4326", epsg_out)
         utm_coords = transformer.transform(input_arr[:, 1], input_arr[:, 0])
 
         # 5.0 RETURN CONVERTED DATA
-        return np.column_stack((utm_coords[1], utm_coords[0]))
+        return np.column_stack((utm_coords[0], utm_coords[1]))
 
     def do_point_render(self):
         """
@@ -389,17 +392,18 @@ class ThreeDimViewer(wx.Frame):
             print("ADDING POINTS")
             for k in range(len(self.predicted_xyz)):
                 point = self.predicted_xyz[k]
-                self.predicted_pointcloud.addPoint(point)
-            print("ADDING ACTOR TO RENDER")
-            # ADD ACTOR TO RENDER
-            self.renderer.AddActor(self.predicted_pointcloud.vtkActor)
-            self.predicted_pointcloud.vtkActor.GetProperty().SetPointSize(1)
-            # HIDE
-            self.predicted_pointcloud.vtkActor.SetVisibility(False)
 
+                point[0] *= self.x_scale
+                point[1] *= self.y_scale
+                point[2] *= self.z_scale
+
+                self.predicted_pointcloud.addPoint(point)
+
+            # RENDER THE GRID
             print("DOING delaunay_predicted")
             self.delaunay_predicted()
 
+            # RERENDER THE ACTIVE WINDOW
             self.renderWindow.Render()
 
             print("DONE")
@@ -573,68 +577,149 @@ class ThreeDimViewer(wx.Frame):
             print("NOW SET AS Z")
         self.renderWindow.Render()
 
+    # def re_render(self):
+    #     """
+    #     # RE RENDER 3D POINTS AFTER REMOVING SELECTION
+    #     """
+    #     if self.current_style == 'base_style':
+    #         # GET ACTIVE CAM POSITION
+    #         # self.get_cam()
+    #         print("re rendering")
+    #
+    #         # REMOVE EXISTING POINT CLOUD FROM THE RENDER AND MEMORY
+    #         self.renderer.RemoveActor(self.pointcloud.vtkActor)
+    #         del self.pointcloud.vtkActor
+    #         del self.pointcloud
+    #
+    #         # CREATE POINT DATA WITH NEW SCALING VALUES
+    #         self.xyz = np.multiply(self.xyz_original, (self.x_scale, self.y_scale, self.z_scale))
+    #         self.difference_xyz = np.multiply(self.difference_xyz_original, (self.x_scale, self.y_scale, self.z_scale))
+    #
+    #         # CREATE THE POINT CLOUD VTK ACTOR
+    #         self.pointcloud = VtkPointCloud(self.xyz, self.difference_xyz, self.score_xyz)
+    #
+    #         for k in range(len(self.xyz)):
+    #             point = self.xyz[k]
+    #
+    #             xyz_cm_id = self.xyz_cm_id[k]
+    #             xyz_cm_line_number = self.xyz_cm_line_number[k]
+    #
+    #             score_xyz = self.score_xyz[k]
+    #
+    #             if self.difference_xyz is not None:
+    #                 difference_xyz = self.difference_xyz[k]
+    #             else:
+    #                 difference_xyz = np.zeros_like(point)
+    #
+    #             # NOW ADD THE DATA TO THE POINTCLOUD
+    #             self.pointcloud.addPoint(point, xyz_cm_id, xyz_cm_line_number, difference_xyz, score_xyz)
+    #
+    #         # RENDER THE NEW POINT CLOUD
+    #         self.renderer.AddActor(self.pointcloud.vtkActor)
+    #         self.set_point_size(float(self.size_slider.GetValue()))
+    #
+    #         # RESCALE THE AXIS OUTLINE
+    #         self.outlineActor.SetBounds(self.xyz_original[:, 0].min() * self.x_scale,
+    #                                     self.xyz_original[:, 0].max() * self.x_scale,
+    #                                     self.xyz_original[:, 1].min() * self.y_scale,
+    #                                     self.xyz_original[:, 1].max() * self.y_scale,
+    #                                     self.xyz_original[:, 2].min() * self.z_scale,
+    #                                     self.xyz_original[:, 2].max() * self.z_scale)
+    #         # CHECK IF GRID ACTOR IS ON
+    #         if self.grid_created == 1:
+    #             self.grid_created = 0
+    #             self.renderer.AddActor(self.meshActor)
+    #
+    #         # SET ACTIVE CAM
+    #         ## self.renderer.SetActiveCamera(self.cam)
+    #         ## self.set_cam()
+    #
+    #     # # --------------------------------------------------------------------------------------------------------------
+    #     # # RERENDER PREDICTED GRID
+    #     # if self.predicted_pointcloud:
+    #     # #     # REMOVE EXISTING POINT CLOUD FROM THE RENDER AND MEMORY
+    #     #     self.renderer.RemoveActor(self.predicted_meshActor)
+    #     #     del self.predicted_meshActor
+    #     #
+    #     #     # CREATE POINT DATA WITH NEW SCALING VALUES
+    #     #     self.predicted_xyz = np.multiply(self.predicted_xyz_original, (self.x_scale, self.y_scale, self.z_scale))
+    #     #
+    #     #     # Render XYZ POINTS
+    #     #     self.predicted_pointcloud = VtkPointCloudPredicted(self.predicted_xyz)
+    #     #
+    #     #     print("ADDING POINTS")
+    #     #     for k in range(len(self.predicted_xyz)):
+    #     #         point = self.predicted_xyz[k]
+    #     #
+    #     #         point[0] *= self.x_scale
+    #     #         point[1] *= self.y_scale
+    #     #         point[2] *= self.z_scale
+    #     #
+    #     #         self.predicted_pointcloud.addPoint(point)
+    #     #
+    #     #     self.cell_array = vtk.vtkCellArray()
+    #     #     self.predicted_boundary = self.predicted_pointcloud.poly_data
+    #     #     self.predicted_boundary.SetPoints(self.predicted_pointcloud.poly_data.GetPoints())
+    #     #     self.predicted_boundary.SetPolys(self.cell_array)
+    #     #
+    #     #     # RENDER THE GRID
+    #     #     if vtk.VTK_MAJOR_VERSION <= 5:
+    #     #         self.predicted_delaunay.SetInput(self.predicted_pointcloud.poly_data.GetOutput())
+    #     #         self.predicted_delaunay.SetSource(self.predicted_boundary)
+    #     #     else:
+    #     #         self.predicted_delaunay.SetInputData(self.predicted_pointcloud.poly_data)
+    #     #         self.predicted_delaunay.SetSourceData(self.predicted_boundary)
+    #     #
+    #     # self.predicted_delaunay.Update()
+    #     #
+    #     # self.predicted_meshMapper.SetInputData(self.predicted_pointcloud.poly_data)
+    #     # self.predicted_meshMapper.SetScalarRange(self.predicted_xyz[:, 2].min(), self.predicted_xyz[:, 2].max())
+    #     # self.predicted_meshMapper.SetScalarVisibility(1)
+    #     # self.predicted_meshMapper.SetInputConnection(self.predicted_delaunay.GetOutputPort())
+    #     # self.predicted_meshActor.SetMapper(self.predicted_meshMapper)
+    #     # # --------------------------------------------------------------------------------------------------------------
+    #
+    #     # RE RENDER THE WINDOW
+    #     self.pointcloud.vtkActor.Modified()
+    #     self.predicted_meshActor.Modified()
+    #
+    #     # self.renderer.SetActiveCamera(self.cam)
+    #     self.renderWindow.Render()
+    #     # self.set_cam()
+    #     # print("FINISHED")
+    #     # self.Interactor.RemoveObservers('KeyPressEvent')
+    #     # self.Interactor.RemoveObservers('CharEvent')
+
     def re_render(self):
         """
         # RE RENDER 3D POINTS AFTER REMOVING SELECTION
         """
         if self.current_style == 'base_style':
-            # GET ACTIVE CAM POSITION
-            # self.get_cam()
-            print("re rendering")
 
-            # REMOVE EXSISTING POINT CLOUD FROM THE RENDER AND MEMORY
-            self.renderer.RemoveActor(self.pointcloud.vtkActor)
-            del self.pointcloud.vtkActor
-            del self.pointcloud
-
-            # CREATE POINT DATA WITH NEW SCALING VALUES
-            self.xyz = np.multiply(self.xyz_original, (self.x_scale, self.y_scale, self.z_scale))
-            self.difference_xyz = np.multiply(self.diff_xyz, (self.x_scale, self.y_scale, self.z_scale))
-
-            # CREATE THE POINT CLOUD VTK ACTOR
-            self.pointcloud = VtkPointCloud(self.xyz, self.difference_xyz, self.score_xyz)
-
-            for k in range(len(self.xyz)):
-                point = self.xyz[k]
-
-                xyz_cm_id = self.xyz_cm_id[k]
-                xyz_cm_line_number = self.xyz_cm_line_number[k]
-
-                score_xyz = self.score_xyz[k]
-
-                if self.difference_xyz is not None:
-                    difference_xyz = self.difference_xyz[k]
-                else:
-                    difference_xyz = np.zeros_like(point)
-
-                # NOW ADD THE DATA TO THE POINTCLOUD
-                self.pointcloud.addPoint(point, xyz_cm_id, xyz_cm_line_number, difference_xyz, score_xyz)
-
-            # RENDER THE NEW POINT CLOUD
-            self.renderer.AddActor(self.pointcloud.vtkActor)
-            self.set_point_size(float(self.size_slider.GetValue()))
+            # RESCALE POINTS
+            self.pointcloud.vtkActor.SetScale(self.x_scale, self.y_scale, self.z_scale)
 
             # RESCALE THE AXIS OUTLINE
-            self.outlineActor.SetBounds(self.xyz[:, 0].min() * self.x_scale, self.xyz[:, 0].max() * self.x_scale,
-                                        self.xyz[:, 1].min() * self.y_scale, self.xyz[:, 1].max() * self.y_scale,
-                                        self.xyz[:, 2].min() * self.z_scale, self.xyz[:, 2].max() * self.z_scale)
-            # CHECK IF GRID ACTOR IS ON
-            if self.grid_created == 1:
-                self.grid_created = 0
-                self.renderer.AddActor(self.meshActor)
+            self.outlineActor.SetBounds(self.xyz_original[:, 0].min() * self.x_scale,
+                                        self.xyz_original[:, 0].max() * self.x_scale,
+                                        self.xyz_original[:, 1].min() * self.y_scale,
+                                        self.xyz_original[:, 1].max() * self.y_scale,
+                                        self.xyz_original[:, 2].min() * self.z_scale,
+                                        self.xyz_original[:, 2].max() * self.z_scale)
+        # RERENDER PREDICTED GRID
+        if self.predicted_pointcloud:
+            self.predicted_meshActor.SetScale(self.x_scale, self.y_scale, self.z_scale*0.0001)
 
-            # SET ACTIVE CAM
-            ## self.renderer.SetActiveCamera(self.cam)
-            ## self.set_cam()
+        # RE RENDER THE WINDOW
+        # self.pointcloud.vtkActor.Modified()
+        # self.predicted_meshActor.Modified()
 
-            # RE RENDER THE WINDOW
-            self.pointcloud.vtkActor.Modified()
-            # self.renderer.SetActiveCamera(self.cam)
-            self.renderWindow.Render()
-            # self.set_cam()
-            # print("FINISHED")
-            # self.Interactor.RemoveObservers('KeyPressEvent')
-            # self.Interactor.RemoveObservers('CharEvent')
+        # self.renderer.SetActiveCamera(self.cam)
+        self.renderWindow.Render()
+        # self.set_cam()
+        # print("FINISHED")
+        # self.Interactor.RemoveObservers('KeyPressEvent')
+        # self.Interactor.RemoveObservers('CharEvent')
 
     def get_cam(self):
         print("!!!!!!!")

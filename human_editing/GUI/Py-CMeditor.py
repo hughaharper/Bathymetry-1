@@ -1,3 +1,34 @@
+import os
+import sys
+import glob
+import subprocess
+import webbrowser
+import folium
+import geojson
+import json
+import matplotlib as mpl
+import numpy as np
+import math as m
+import wx
+import wx.py as py
+import wx.lib.agw.aui as aui
+from matplotlib import pyplot as plt
+from wx.lib.buttons import GenBitmapButton
+from wx import html2
+from three_dim_viewer import ThreeDimViewer
+# from old_three_dim_viewer import ThreeDimViewer
+from folium import LayerControl
+from custom_folium_draw import Draw
+from folium.plugins import MousePosition
+from folium.plugins import FastMarkerCluster
+import shapely.speedups
+shapely.speedups.enable()
+from shapely.geometry import Polygon
+import geopandas as gpd
+
+# to-do vtk.vtkRadiusOutlierRemoval
+mpl.use('WXAgg')
+
 """
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 **Description**
@@ -45,41 +76,6 @@ Documentation created using Sphinx.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# IMPORT MODULES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-import os
-import sys
-import glob
-import subprocess
-import webbrowser
-import folium
-import geojson
-import json
-import matplotlib as mpl
-import numpy as np
-import wx
-import wx.py as py
-import wx.lib.agw.aui as aui
-from matplotlib import pyplot as plt
-from wx.lib.buttons import GenBitmapButton
-from wx import html2
-from three_dim_viewer import ThreeDimViewer
-# from old_three_dim_viewer import ThreeDimViewer
-from folium import LayerControl
-from custom_folium_draw import Draw
-from folium.plugins import MousePosition
-from folium.plugins import FastMarkerCluster
-import shapely.speedups
-shapely.speedups.enable()
-from shapely.geometry import Polygon
-import geopandas as gpd
-
-# to-do vtk.vtkRadiusOutlierRemoval
-mpl.use('WXAgg')
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class PyCMeditor(wx.Frame):
     """
@@ -526,27 +522,20 @@ class PyCMeditor(wx.Frame):
                 colors[i, 0] = self.color_score(self.cm[i, 6])
                 colors[i, 1] = self.color_depth(self.cm[i, 7])
 
-            # ADD COLORS TO CM ARRAY
+            # 2.1 ADD COLORS TO CM ARRAY
             self.cm = np.column_stack((self.cm, colors))
-
-            # print(self.cm[0, :])
 
             # 3.0 DIVIDE RECORDS INTO BAD, UNCERTAIN, GOOD (BASED ON ML SCORE)
 
             # 3.1 MAKE NUMPY ARRAY WITH BAD SCORES
             scored_bad = self.cm[self.cm[:, 6] <= bad_th]
-            print(np.shape(scored_bad))
 
             # 3.2 MAKE NUMPY ARRAY WITH UNCERTAIN SCORES
             scored_uncertain = self.cm[self.cm[:, 6] > bad_th]
             scored_uncertain = scored_uncertain[scored_uncertain[:, 6] <= uncertain_th]
-            print(np.shape(scored_uncertain))
 
             # 3.3 MAKE NUMPY ARRAY WITH GOOD SCORES
             scored_good = self.cm[self.cm[:, 6] > uncertain_th]
-            print(np.shape(scored_good))
-
-            print(self.cm)
 
             # 4.0 LOAD CM DATA INTO THE HTML WINDOW
 
@@ -600,10 +589,53 @@ class PyCMeditor(wx.Frame):
             self.folium_map.save("Py-CMeditor.html")
             self.browser.Reload()
 
+            # IMPORT PREDICTED GRID
+            lon, lat = self.get_centeroid(self.cm[:, 1:3])
+            epsg_code = self.convert_wgs_to_utm_epsg_code(lon, lat)
+            self.get_predicted(epsg_code)
+
         except IndexError:
             error_message = "ERROR IN LOADING PROCESS - FILE MUST BE ASCII SPACE DELIMITED"
             wx.MessageDialog(self, -1, error_message, "Load Error")
             raise
+
+    def get_centeroid(self, arr):
+        length = arr.shape[0]
+        sum_x = np.sum(arr[:, 0])
+        sum_y = np.sum(arr[:, 1])
+        return sum_x/length, sum_y/length
+
+    def convert_wgs_to_utm_epsg_code(self, lon, lat):
+        utm_band = str((m.floor((lon + 180) / 6) % 60) + 1)
+        if len(utm_band) == 1:
+            utm_band = '0' + utm_band
+        if lat >= 0:
+            epsg_code = '326' + utm_band
+        else:
+            epsg_code = '327' + utm_band
+        return epsg_code
+
+    def get_predicted(self, epsg_code):
+        msg = "Please wait while we process your request..."
+        self.busyDlg = wx.BusyInfo(msg)
+
+        try:
+            #  SAVE CM AS INPUT XYZ FOR BASH SCRIPT'
+            cm_file = self.cm[:, 1:4]
+            np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
+
+            # RUN BASH SCRIPT '
+            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename, epsg_code])
+
+            # LOAD CURRENT GRID XYZ POINTS
+            self.predicted_xyz = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
+
+            # LOAD DIFFERENCE CM
+            self.difference_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
+
+        except AttributeError:
+            print("ERROR: no .cm file loaded")
+        self.busyDlg = None
 
     def delete_cm_file(self):
         """
@@ -676,34 +708,6 @@ class PyCMeditor(wx.Frame):
 
     def open_predicted_cm_file(self, event):
         pass
-
-    def get_predicted(self, event):
-        msg = "Please wait while we process your request..."
-        self.busyDlg = wx.BusyInfo(msg)
-
-        try:
-            #  SAVE CM AS INPUT XYZ FOR BASH SCRIPT'
-            cm_file = self.cm[:, 1:4]
-            np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
-
-            # RUN BASH SCRIPT '
-            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename])
-
-            # LOAD CURRENT GRID XYZ POINTS
-            self.predicted_cm = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-
-            # IVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X & Z
-            self.predicted_xyz = np.divide(self.predicted_cm, (1.0, 1.0, 10000.0))
-
-            # LOAD DIFFERENCE CM
-            self.diff_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-
-            # DIVIDE TO MAKE THE Z-SCALE A SIMILAR ORDER OF MAGNITUDE AS X & Y
-            self.difference_xyz = np.divide(self.diff_xyz, (1.0, 1.0, 10000.0))
-
-        except AttributeError:
-            print("ERROR: no .cm file loaded")
-        self.busyDlg = None
 
     def regrid(self, event):
         # STEP 1: WRITE OUT TMP CM FILE
@@ -797,11 +801,22 @@ class PyCMeditor(wx.Frame):
     def plot_three_dim(self, event):
         """
         PLOT 3D VIEW OF DATA
+
+        inputs::
+
+        self.cm =
+        self.xyz =
+        self.xyz_cm_id =
+        self.xyz_meta_data =
+        self.xyz_cm_line_number =
+        self.predicted_xyz =
+        self.difference_xyz =
+        self.score_xyz =
         """
 
         # OPEN A vtk 3D VIEWER WINDOW AND CREATE A RENDER'
         self.tdv = ThreeDimViewer(self, -1, 'Modify Current Model', self.cm, self.xyz, self.xyz_cm_id,
-                                  self.xyz_meta_data, self.xyz_cm_line_number, self.predicted_xyz, self.diff_xyz,
+                                  self.xyz_meta_data, self.xyz_cm_line_number, self.predicted_xyz,
                                   self.difference_xyz, self.score_xyz)
         self.tdv.Show(True)
 
@@ -937,8 +952,8 @@ class OpenCmDialog(wx.Dialog):
         self.uncertain_scores_text = wx.StaticText(self.floating_panel, -1, "Uncertain threshold: ")
 
         # 3. THRESHOLD INPUT BOXES
-        self.bad_th_text = wx.TextCtrl(self.floating_panel, -1, "0", size=(100, -1))
-        self.uncertain_th_text = wx.TextCtrl(self.floating_panel, -1, "0", size=(100, -1))
+        self.bad_th_text = wx.TextCtrl(self.floating_panel, -1, "0.1", size=(100, -1))
+        self.uncertain_th_text = wx.TextCtrl(self.floating_panel, -1, "0.2", size=(100, -1))
 
         # 4. LINE SPACER 2
         self.line2 = (wx.StaticLine(self.floating_panel), 0, wx.ALL | wx.EXPAND, 5)
