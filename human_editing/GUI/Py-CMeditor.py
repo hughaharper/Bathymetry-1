@@ -282,28 +282,7 @@ class PyCMeditor(wx.Frame):
         self.regridded = folium.TileLayer(tiles='',  name='Regrid', attr='regridded', overlay=False, control=False)
         self.regridded.add_to(self.folium_map)
 
-        # self.regridded_tiles = folium.TileLayer(
-        #     tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png',
-        #                               )
-        # self.regridded_tiles.add_to(self.folium_map)
-
-
-
-        # TEMPORARY OVERLAY TILES FOR EXPERIMENTATION
-
-        # self.V2tiles = folium.TileLayer(tiles=self.cwd + '/../../../SRTM15+V2-tiles/{z}/{x}/{y}.png',
-        #                               name='SRTM15+V2.0', attr='SRTM15+V2.0', control=True)
-        # self.V2tiles.add_to(self.folium_map)
-
-        # self.V2tiles = folium.TileLayer(tiles=self.cwd + '/topoN34W143/{z}/{x}/{y}.png',
-        #                                 name='us_multi2_bathy', attr='us_multi2_bathy', control=False)
-        # self.V2tiles.add_to(self.folium_map)
-        # self.regridded_tiles = folium.TileLayer(tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png',
-        #                              name='Regrid', attr='Regrid', overlay=True, control=True)
-        # self.regridded_tiles.add_to(self.folium_map)
-
         # LOAD DRAWING FUNCTIONALITY
-        # importer=True,
         self.draw = Draw(filename='outpoint.geojson',
                          draw_options={'polyline': False, 'rectangle': False, 'circle': False, 'marker': False,
                                        'circlemarker': False},
@@ -365,20 +344,14 @@ class PyCMeditor(wx.Frame):
     def draw_button_and_list_frame(self):
         """#% CREATE LEFT HAND BUTTON MENU"""
 
-        # BUTTON ONE'
-        self.button_one = wx.Button(self.left_panel_top, -1, "Load .cm", style=wx.ALIGN_CENTER)
+        # BUTTON - LOAD .cm FILE FROM DISC
+        self.button_load_cm = wx.Button(self.left_panel_top, -1, "Load .cm", style=wx.ALIGN_CENTER)
 
-        # BUTTON TWO'
-        self.button_two = wx.Button(self.left_panel_top, -1, "Load .cm dir", style=wx.ALIGN_CENTER)
+        # BUTTON - LOAD ALL .cm FILES FROM DIR
+        self.button_load_cm_dir = wx.Button(self.left_panel_top, -1, "Load .cm dir", style=wx.ALIGN_CENTER)
 
-        # BUTTON THREE'
-        self.button_three = wx.Button(self.left_panel_top, -1, "Load predicted", style=wx.ALIGN_CENTER)
-
-        # BUTTON FOUR'
-        self.button_four = wx.Button(self.left_panel_top, -1, "3D viewer", style=wx.ALIGN_CENTER)
-
-        # BUTTON FIVE'
-        self.button_five = wx.Button(self.left_panel_top, -1, "Get predicted", style=wx.ALIGN_CENTER)
+        # BUTTON - LAUNCH 3D VIEWER
+        self.button_launch_3d_viewer = wx.Button(self.left_panel_top, -1, "3D viewer", style=wx.ALIGN_CENTER)
 
         # BUTTON SIX ADD EXPORT BUTTON FOR POLYGONS
         self.button_export_polygons = wx.Button(self.left_panel_top, -1, "Export polygons", pos=(0, 170),
@@ -412,9 +385,9 @@ class PyCMeditor(wx.Frame):
         # self.box_right_bottom_sizer.Add(self.canvas, 1, wx.ALL | wx.ALIGN_RIGHT | wx.EXPAND, border=2)
 
         # CREATE LAYER BUTTON BOX
-        self.left_box_top_sizer = wx.FlexGridSizer(cols=1, rows=10, hgap=8, vgap=8)
-        self.left_box_top_sizer.AddMany([self.button_one, self.button_two, self.button_three, self.button_four,
-                                         self.button_five, self.button_regrid, self.button_export_polygons,
+        self.left_box_top_sizer = wx.FlexGridSizer(cols=1, rows=8, hgap=8, vgap=8)
+        self.left_box_top_sizer.AddMany([self.button_load_cm, self.button_load_cm_dir, self.button_launch_3d_viewer,
+                                         self.button_regrid, self.button_export_polygons,
                                          self.button_import_polygons, self.button_flag_points_using_polygons,
                                          self.button_save_cm_file])
 
@@ -431,11 +404,9 @@ class PyCMeditor(wx.Frame):
 
     def bind_button_events(self):
         """CONNECT MOUSE AND EVENT BINDINGS"""
-        self.button_one.Bind(wx.EVT_BUTTON, self.open_cm_file)
-        self.button_two.Bind(wx.EVT_BUTTON, self.open_cm_directory)
-        self.button_three.Bind(wx.EVT_BUTTON, self.open_predicted_cm_file)
-        self.button_four.Bind(wx.EVT_BUTTON, self.plot_three_dim)
-        self.button_five.Bind(wx.EVT_BUTTON, self.get_predicted)
+        self.button_load_cm.Bind(wx.EVT_BUTTON, self.open_cm_file)
+        self.button_load_cm_dir.Bind(wx.EVT_BUTTON, self.open_cm_directory)
+        self.button_launch_3d_viewer.Bind(wx.EVT_BUTTON, self.plot_three_dim)
         self.button_save_cm_file.Bind(wx.EVT_BUTTON, self.save_cm_file)
         self.button_regrid.Bind(wx.EVT_BUTTON, self.regrid)
         self.button_export_polygons.Bind(wx.EVT_BUTTON, self.on_wx_export_button)
@@ -508,13 +479,12 @@ class PyCMeditor(wx.Frame):
 
             ## 1.1 SAVE XYZ FOR 3D VIEWER
             self.xyz = self.cm[:, 1:4]
-            self.xyz = np.divide(self.xyz, (1.0, 1.0, 10000.0))  # % DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X&Z
             self.xyz_cm_id = self.cm[:, 0].astype(int)
             self.xyz_width = self.cm.shape[1]
             self.xyz_meta_data = self.cm[:, 4:self.xyz_width]
             self.xyz_point_flags = np.zeros(shape=(1, len(self.xyz)))
             self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz) + 1))
-            self.score_xyz = self.cm[:, [1, 2, 6]]
+            self.score_xyz = self.cm[:, [1, 2, 6]]  # ML SCORE
 
             # 2.0 GENERATE COLORS FOR THE DEPTHS AND SCORES
             colors = np.empty(shape=[self.cm.shape[0], 2], dtype=object)
@@ -685,7 +655,8 @@ class PyCMeditor(wx.Frame):
         output_filename = save_file_dialog.GetPath()
 
         # 3.0 SAVE .cm TO DISC
-        np.savetxt(output_filename, self.cm[:, 0:10], fmt="%1d %1.6f %1.6f %1.1f %1d %1d %1d %1.1f %1.16f %1d")
+        print(self.cm[1, :])
+        np.savetxt(output_filename, self.cm[:, 0:9], fmt="%1d %4.6f %4.6f %4.16f %1d %1d %1d %1.1f %1.1f")
 
     def list_item_selected(self, event):
         """ACTIVATED WHEN A FILE FROM THE LIST CONTROL IS SELECTED"""
@@ -711,7 +682,9 @@ class PyCMeditor(wx.Frame):
 
     def regrid(self, event):
         # STEP 1: WRITE OUT TMP CM FILE
-        np.savetxt('current_cm.tmp', self.cm[:, 0:8], fmt="%1d %1.6f %1.6f %1.1f %1d %1d %1d %1.1f")
+        self.cm_out= np.copy(self.cm)
+        self.cm_out
+        np.savetxt('current_cm.tmp', self.cm_out[:, 0:8], fmt="%1d %4.6f %4.6f %4.16f %1d %1d %1d %1.1f")
 
         # RUN BASH SCRIPT FOR REGRIDDING
         subprocess.run(["bash", self.cwd + '/' + 'regrid.sh', self.cwd + '/' + 'current_cm.tmp'])
@@ -792,12 +765,6 @@ class PyCMeditor(wx.Frame):
         with open(output_prefix+'.geojson', 'w') as f:
             geojson.dump(output_geojson_file, f)
 
-    def button_three(self, event):
-        """OPEN 3D VEIWER"""
-        self.plot_three_dim()
-        # self.SetTitle("STL File Viewer: " + self.p1.filename)
-        # self.statusbar.SetStatusText("Use W,S,F,R keys and mouse to interact with the model ")
-
     def plot_three_dim(self, event):
         """
         PLOT 3D VIEW OF DATA
@@ -839,7 +806,7 @@ class PyCMeditor(wx.Frame):
     def flag_points_using_polygons(self, event):
         """Flag all points that fall within the user defined polygons"""
 
-        # 1.0 STEP UP INPUT POINTS AND GET CURRENT FLAG VALUES
+        # 1.0 STEP UP INPUT POINTS
         self.input_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(self.cm[:, 1], self.cm[:, 2]))
 
         # 2.0 GET POLYGONS
@@ -853,11 +820,9 @@ class PyCMeditor(wx.Frame):
         for i in range(len(self.fc.features)):
             # 3.1 GET POLYGON COORDINATES
             self.polygon = Polygon(self.fc.features[i]['geometry']['coordinates'][0])
-            print(self.polygon)
             # 3.2 LOOP OVER EACH INPUT POINT
             self.output_result[:, i] = self.input_points.within(self.polygon)
 
-        print(self.output_result)
         # 5.0 CHECK IF A POINT IS IN ANY OF THE POLYGONS. IF TRUE THEN SET THE POINT FLAG AS A 1
         for i in range(len(self.output_result)):
             for p in range(np.shape(self.output_result)[1]):

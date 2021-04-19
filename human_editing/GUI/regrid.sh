@@ -33,7 +33,7 @@ gmt grdmath TMP_SID_MASK_V2.1-bb.nc=bb ISNAN = TMP_SID_NANs_MASK-bb.nc=bb
 
 #------------------------------------------------------------------------------
 # STEP 4.0 CONVERT THE CM FILE TO GRID AN SET FLAGGED POINTS AS NaN
-awk '{ if ($6 != 9999) print $2, $3, $7; else print $2, $3, "NaN"}' ${cm_file} |\
+awk '{ if ($5 != 9999) print $2, $3, $4; else print $2, $3, "NaN"}' ${cm_file} |\
   gmt xyz2grd ${R} -I15s/15s -rp -GTMP_input_data.nc=bs
 #------------------------------------------------------------------------------
 
