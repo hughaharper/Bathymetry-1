@@ -418,16 +418,19 @@ class PyCMeditor(wx.Frame):
 
     def color_score(self, value):
         """SET COLOR FOR POINT PLOTTING"""
-        cmap = plt.cm.get_cmap('RdYlBu')
-        norm = mpl.colors.Normalize(vmin=0.0, vmax=1.0)
-        rgb = cmap(value)[:3]
+        if value != -9999:
+            cmap = plt.cm.get_cmap('RdYlBu')
+            norm = plt.Normalize(0.0, 1.0)
+            rgb = cmap(norm(value))[:3]
+        else:
+            rgb = (0, 0, 0)  # SET FLAGGED NODES AS BLACK
         return (mpl.colors.rgb2hex(rgb))
 
     def color_depth(self, value):
         """SET COLOR FOR POINT PLOTTING"""
         cmap = plt.cm.get_cmap('viridis')
-        norm = mpl.colors.Normalize(vmin=0.0, vmax=2000.0)
-        rgb = cmap(abs(value))[:3]
+        norm = plt.Normalize(-10000.0, 0.0)
+        rgb = cmap(norm(value))[:3]
         return (mpl.colors.rgb2hex(rgb))
 
     def open_cm_file(self, event):
@@ -441,8 +444,8 @@ class PyCMeditor(wx.Frame):
         if open_cm_dialogbox.regular_load_button is True or open_cm_dialogbox.cluster_load_button is True:
 
             # 1. SET THE THRESHOLD VALUES
-            bad_th = float(open_cm_dialogbox.bad_th_value)
-            uncertain_th = float(open_cm_dialogbox.uncertain_th_value)
+            self.bad_th = float(open_cm_dialogbox.bad_th_value)
+            self.uncertain_th = float(open_cm_dialogbox.uncertain_th_value)
 
             # 2. OPEN THE FILE
             open_file_dialog = wx.FileDialog(self, "Open XY file", "", "", "All files (*.cm)|*.*", wx.FD_OPEN |
@@ -469,7 +472,7 @@ class PyCMeditor(wx.Frame):
                     self.zoom_level = 8
 
                 # LOAD THE DATA
-                self.load_cm_file_as_cluster(bad_th, uncertain_th)
+                self.load_cm_file_as_cluster(self.bad_th, self.uncertain_th)
 
     def load_cm_file_as_cluster(self, bad_th, uncertain_th):
         """LOAD .cm FILE AND PLOT AS CLUSTERS"""
@@ -489,8 +492,8 @@ class PyCMeditor(wx.Frame):
             # 2.0 GENERATE COLORS FOR THE DEPTHS AND SCORES
             colors = np.empty(shape=[self.cm.shape[0], 2], dtype=object)
             for i in range(0, self.cm.shape[0]):
-                colors[i, 0] = self.color_score(self.cm[i, 6])
-                colors[i, 1] = self.color_depth(self.cm[i, 7])
+                colors[i, 0] = self.color_score(self.cm[i, 5])
+                colors[i, 1] = self.color_depth(self.cm[i, 3])
 
             # 2.1 ADD COLORS TO CM ARRAY
             self.cm = np.column_stack((self.cm, colors))
@@ -555,19 +558,30 @@ class PyCMeditor(wx.Frame):
                                                                callback=callback2,
                                                                disableClusteringAtZoom=self.zoom_level))
 
-            # SAVE AND DISPLAY THE NEW FOLIUM MAP (INCLUDING THE .cm FILE)
-            self.folium_map.save("Py-CMeditor.html")
-            self.browser.Reload()
-
             # IMPORT PREDICTED GRID
             lon, lat = self.get_centeroid(self.cm[:, 1:3])
             epsg_code = self.convert_wgs_to_utm_epsg_code(lon, lat)
             self.get_predicted(epsg_code)
 
+            # SAVE AND DISPLAY THE NEW FOLIUM MAP (INCLUDING THE .cm FILE)
+            self.set_map_location()
+            self.folium_map.save("Py-CMeditor.html")
+            self.browser.Reload()
+
+
         except IndexError:
             error_message = "ERROR IN LOADING PROCESS - FILE MUST BE ASCII SPACE DELIMITED"
             wx.MessageDialog(self, -1, error_message, "Load Error")
             raise
+
+    def set_map_location(self):
+        map_name = self.folium_map.get_name()
+        r, lt = self.browser.RunScript(str(map_name) + '.getCenter()["lat"]')
+        r, ln = self.browser.RunScript(str(map_name) + '.getCenter()["lng"]')
+        r, zoom = self.browser.RunScript(str(map_name) + '.getZoom()')
+        self.folium_map.options['zoom'] = zoom
+        self.folium_map.location = [lt, ln]
+
 
     def get_centeroid(self, arr):
         length = arr.shape[0]
@@ -970,6 +984,38 @@ class OpenCmDialog(wx.Dialog):
         self.regular_load_button = False
         self.EndModal(1)
 
+    def redraw(self):
+        """REDRAW THE CM POINT DATA ON THEE MAP AFTER APPLYING FLAGS TO THE DATA WITHIN USER DERIVED POLYGONS"""
+        # 1.0 GENERATE NEW COLORS FOR THE DEPTHS (FLAGGED= -9999)
+        colors = np.empty(shape=[self.cm.shape[0], 1], dtype=object)
+        for i in range(0, self.cm.shape[0]):
+            colors[i, 1] = self.color_depth(self.cm[i, 3])
+
+        # 1.1 ADD COLORS TO CM ARRAY
+        self.cm[:, 7] = colors
+
+        # 3.0 DIVIDE RECORDS INTO BAD, UNCERTAIN, GOOD (BASED ON ML SCORE)
+        scored_bad = self.cm[self.cm[:, 6] <= self.bad_th]
+        bad_list = scored_bad[:, (2, 1, 9, 6)].tolist()
+
+        scored_uncertain = self.cm[self.cm[:, 6] > self.bad_th]
+        scored_uncertain = scored_uncertain[scored_uncertain[:, 6] <= self.uncertain_th]
+        uncertain_list = scored_uncertain[:, (2, 1, 9, 6)].tolist()
+
+        # 3.3 MAKE NUMPY ARRAY WITH GOOD SCORES
+        scored_good = self.cm[self.cm[:, 6] > self.uncertain_th]
+        scored_good = scored_good[:, (2, 1, 9, 6)].tolist()
+
+        # 4.0 GET THE CURRENT JAVA SCRIPT OBJECTS DATA POINTERS
+        bad_fg_data_java_pointer = self.bad_fg._children[list(self.bad_fg._children.keys())[0]].data
+        uncertain_fg_java_pointer = self.uncertain_fg._children[list(self.uncertain_fg._children.keys())[0]].data
+        good_fg_java_pointer = self.good_fg._children[list(self.good_fg._children.keys())[0]].data
+
+        # CREATE NEW DATA ARRAY
+        new_bad_data = [list(i) for i in zip(g.cm[:, 2], g.cm[:, 3], g.cm[:, 4], g.cm[:, 9])]
+
+        # INSET NEW DATA INTO JAVA OBJECT
+        self.bad_fg._children[list(self.bad_fg._children.keys())[0]].data = new_bad_data
 
 class SavePolygonsDialog(wx.Dialog):
     """
