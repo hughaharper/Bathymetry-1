@@ -147,30 +147,9 @@ class VtkPointCloudPredicted:
         Make a lookup table using vtkColorSeries.
         :return: An indexed lookup table.
         """
-        # # Make the lookup table.
-        # colorSeries = vtk.vtkColorSeries()
-        # # # Select a color scheme.
-        # colorSeriesEnum = colorSeries.BREWER_DIVERGING_BROWN_BLUE_GREEN_9
-        # # # colorSeriesEnum = colorSeries.BREWER_DIVERGING_SPECTRAL_10
-        # # # colorSeriesEnum = colorSeries.BREWER_DIVERGING_SPECTRAL_3
-        # # # colorSeriesEnum = colorSeries.BREWER_DIVERGING_PURPLE_ORANGE_9
-        # # colorSeriesEnum = colorSeries.BREWER_SEQUENTIAL_BLUE_PURPLE_9
-        # # # colorSeriesEnum = colorSeries.BREWER_SEQUENTIAL_BLUE_GREEN_9
-        # # # colorSeriesEnum = colorSeries.BREWER_QUALITATIVE_SET3
-        # # # colorSeriesEnum = colorSeries.CITRUS
-        # colorSeries.SetColorScheme(colorSeriesEnum)
-        # lut = vtk.vtkLookupTable()
-        # colorSeries.BuildLookupTable(lut)
-        # lut.SetNanColor(1, 0, 0, 1)
-
         a = self.xyz[:, 2].min()
         b = self.xyz[:, 2].max()
         lut = vtk.vtkColorTransferFunction()
-        # lut.AddRGBPoint(a, 0.0, 0.0, 1.0)
-        # lut.AddRGBPoint(a + (b - a) / 4, 0.0, 0.5, 0.5)
-        # lut.AddRGBPoint(a + (b - a) / 2, 0.0, 1.0, 0.0)
-        # lut.AddRGBPoint(b - (b - a) / 4, 0.5, 0.5, 0.0)
-        # lut.AddRGBPoint(b, 1.0, 0.0, 0.0)
 
         # % NB. FORMAT:: VALUE THEN RGB CODE (THREE NUMBERS)
         lut.AddRGBPoint(a, 0.25, 0.25, 0.25)

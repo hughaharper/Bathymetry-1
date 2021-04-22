@@ -1,3 +1,34 @@
+import os
+import sys
+import glob
+import subprocess
+import webbrowser
+import folium
+import geojson
+import json
+import matplotlib as mpl
+import numpy as np
+import math as m
+import wx
+import wx.py as py
+import wx.lib.agw.aui as aui
+from matplotlib import pyplot as plt
+from wx.lib.buttons import GenBitmapButton
+from wx import html2
+from three_dim_viewer import ThreeDimViewer
+# from old_three_dim_viewer import ThreeDimViewer
+from folium import LayerControl
+from custom_folium_draw import Draw
+from folium.plugins import MousePosition
+from folium.plugins import FastMarkerCluster
+import shapely.speedups
+shapely.speedups.enable()
+from shapely.geometry import Polygon
+import geopandas as gpd
+
+# to-do vtk.vtkRadiusOutlierRemoval
+mpl.use('WXAgg')
+
 """
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 **Description**
@@ -45,41 +76,6 @@ Documentation created using Sphinx.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# IMPORT MODULES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-import os
-import sys
-import glob
-import subprocess
-import webbrowser
-import folium
-import geojson
-import json
-import matplotlib as mpl
-import numpy as np
-import wx
-import wx.py as py
-import wx.lib.agw.aui as aui
-from matplotlib import pyplot as plt
-from wx.lib.buttons import GenBitmapButton
-from wx import html2
-from three_dim_viewer import ThreeDimViewer
-# from old_three_dim_viewer import ThreeDimViewer
-from folium import LayerControl
-from custom_folium_draw import Draw
-from folium.plugins import MousePosition
-from folium.plugins import FastMarkerCluster
-import shapely.speedups
-shapely.speedups.enable()
-from shapely.geometry import Polygon
-import geopandas as gpd
-
-# to-do vtk.vtkRadiusOutlierRemoval
-mpl.use('WXAgg')
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class PyCMeditor(wx.Frame):
     """
@@ -286,28 +282,7 @@ class PyCMeditor(wx.Frame):
         self.regridded = folium.TileLayer(tiles='',  name='Regrid', attr='regridded', overlay=False, control=False)
         self.regridded.add_to(self.folium_map)
 
-        # self.regridded_tiles = folium.TileLayer(
-        #     tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png',
-        #                               )
-        # self.regridded_tiles.add_to(self.folium_map)
-
-
-
-        # TEMPORARY OVERLAY TILES FOR EXPERIMENTATION
-
-        # self.V2tiles = folium.TileLayer(tiles=self.cwd + '/../../../SRTM15+V2-tiles/{z}/{x}/{y}.png',
-        #                               name='SRTM15+V2.0', attr='SRTM15+V2.0', control=True)
-        # self.V2tiles.add_to(self.folium_map)
-
-        # self.V2tiles = folium.TileLayer(tiles=self.cwd + '/topoN34W143/{z}/{x}/{y}.png',
-        #                                 name='us_multi2_bathy', attr='us_multi2_bathy', control=False)
-        # self.V2tiles.add_to(self.folium_map)
-        # self.regridded_tiles = folium.TileLayer(tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/GUI/TMP_RESTORED/{z}/{x}/{y}.png',
-        #                              name='Regrid', attr='Regrid', overlay=True, control=True)
-        # self.regridded_tiles.add_to(self.folium_map)
-
         # LOAD DRAWING FUNCTIONALITY
-        # importer=True,
         self.draw = Draw(filename='outpoint.geojson',
                          draw_options={'polyline': False, 'rectangle': False, 'circle': False, 'marker': False,
                                        'circlemarker': False},
@@ -369,20 +344,14 @@ class PyCMeditor(wx.Frame):
     def draw_button_and_list_frame(self):
         """#% CREATE LEFT HAND BUTTON MENU"""
 
-        # BUTTON ONE'
-        self.button_one = wx.Button(self.left_panel_top, -1, "Load .cm", style=wx.ALIGN_CENTER)
+        # BUTTON - LOAD .cm FILE FROM DISC
+        self.button_load_cm = wx.Button(self.left_panel_top, -1, "Load .cm", style=wx.ALIGN_CENTER)
 
-        # BUTTON TWO'
-        self.button_two = wx.Button(self.left_panel_top, -1, "Load .cm dir", style=wx.ALIGN_CENTER)
+        # BUTTON - LOAD ALL .cm FILES FROM DIR
+        self.button_load_cm_dir = wx.Button(self.left_panel_top, -1, "Load .cm dir", style=wx.ALIGN_CENTER)
 
-        # BUTTON THREE'
-        self.button_three = wx.Button(self.left_panel_top, -1, "Load predicted", style=wx.ALIGN_CENTER)
-
-        # BUTTON FOUR'
-        self.button_four = wx.Button(self.left_panel_top, -1, "3D viewer", style=wx.ALIGN_CENTER)
-
-        # BUTTON FIVE'
-        self.button_five = wx.Button(self.left_panel_top, -1, "Get predicted", style=wx.ALIGN_CENTER)
+        # BUTTON - LAUNCH 3D VIEWER
+        self.button_launch_3d_viewer = wx.Button(self.left_panel_top, -1, "3D viewer", style=wx.ALIGN_CENTER)
 
         # BUTTON SIX ADD EXPORT BUTTON FOR POLYGONS
         self.button_export_polygons = wx.Button(self.left_panel_top, -1, "Export polygons", pos=(0, 170),
@@ -416,9 +385,9 @@ class PyCMeditor(wx.Frame):
         # self.box_right_bottom_sizer.Add(self.canvas, 1, wx.ALL | wx.ALIGN_RIGHT | wx.EXPAND, border=2)
 
         # CREATE LAYER BUTTON BOX
-        self.left_box_top_sizer = wx.FlexGridSizer(cols=1, rows=10, hgap=8, vgap=8)
-        self.left_box_top_sizer.AddMany([self.button_one, self.button_two, self.button_three, self.button_four,
-                                         self.button_five, self.button_regrid, self.button_export_polygons,
+        self.left_box_top_sizer = wx.FlexGridSizer(cols=1, rows=8, hgap=8, vgap=8)
+        self.left_box_top_sizer.AddMany([self.button_load_cm, self.button_load_cm_dir, self.button_launch_3d_viewer,
+                                         self.button_regrid, self.button_export_polygons,
                                          self.button_import_polygons, self.button_flag_points_using_polygons,
                                          self.button_save_cm_file])
 
@@ -435,11 +404,9 @@ class PyCMeditor(wx.Frame):
 
     def bind_button_events(self):
         """CONNECT MOUSE AND EVENT BINDINGS"""
-        self.button_one.Bind(wx.EVT_BUTTON, self.open_cm_file)
-        self.button_two.Bind(wx.EVT_BUTTON, self.open_cm_directory)
-        self.button_three.Bind(wx.EVT_BUTTON, self.open_predicted_cm_file)
-        self.button_four.Bind(wx.EVT_BUTTON, self.plot_three_dim)
-        self.button_five.Bind(wx.EVT_BUTTON, self.get_predicted)
+        self.button_load_cm.Bind(wx.EVT_BUTTON, self.open_cm_file)
+        self.button_load_cm_dir.Bind(wx.EVT_BUTTON, self.open_cm_directory)
+        self.button_launch_3d_viewer.Bind(wx.EVT_BUTTON, self.plot_three_dim)
         self.button_save_cm_file.Bind(wx.EVT_BUTTON, self.save_cm_file)
         self.button_regrid.Bind(wx.EVT_BUTTON, self.regrid)
         self.button_export_polygons.Bind(wx.EVT_BUTTON, self.on_wx_export_button)
@@ -451,16 +418,19 @@ class PyCMeditor(wx.Frame):
 
     def color_score(self, value):
         """SET COLOR FOR POINT PLOTTING"""
-        cmap = plt.cm.get_cmap('RdYlBu')
-        norm = mpl.colors.Normalize(vmin=0.0, vmax=1.0)
-        rgb = cmap(value)[:3]
+        if value != -9999:
+            cmap = plt.cm.get_cmap('RdYlBu')
+            norm = plt.Normalize(0.0, 1.0)
+            rgb = cmap(norm(value))[:3]
+        else:
+            rgb = (0, 0, 0)  # SET FLAGGED NODES AS BLACK
         return (mpl.colors.rgb2hex(rgb))
 
     def color_depth(self, value):
         """SET COLOR FOR POINT PLOTTING"""
         cmap = plt.cm.get_cmap('viridis')
-        norm = mpl.colors.Normalize(vmin=0.0, vmax=2000.0)
-        rgb = cmap(abs(value))[:3]
+        norm = plt.Normalize(-10000.0, 0.0)
+        rgb = cmap(norm(value))[:3]
         return (mpl.colors.rgb2hex(rgb))
 
     def open_cm_file(self, event):
@@ -474,8 +444,8 @@ class PyCMeditor(wx.Frame):
         if open_cm_dialogbox.regular_load_button is True or open_cm_dialogbox.cluster_load_button is True:
 
             # 1. SET THE THRESHOLD VALUES
-            bad_th = float(open_cm_dialogbox.bad_th_value)
-            uncertain_th = float(open_cm_dialogbox.uncertain_th_value)
+            self.bad_th = float(open_cm_dialogbox.bad_th_value)
+            self.uncertain_th = float(open_cm_dialogbox.uncertain_th_value)
 
             # 2. OPEN THE FILE
             open_file_dialog = wx.FileDialog(self, "Open XY file", "", "", "All files (*.cm)|*.*", wx.FD_OPEN |
@@ -502,7 +472,7 @@ class PyCMeditor(wx.Frame):
                     self.zoom_level = 8
 
                 # LOAD THE DATA
-                self.load_cm_file_as_cluster(bad_th, uncertain_th)
+                self.load_cm_file_as_cluster(self.bad_th, self.uncertain_th)
 
     def load_cm_file_as_cluster(self, bad_th, uncertain_th):
         """LOAD .cm FILE AND PLOT AS CLUSTERS"""
@@ -512,41 +482,33 @@ class PyCMeditor(wx.Frame):
 
             ## 1.1 SAVE XYZ FOR 3D VIEWER
             self.xyz = self.cm[:, 1:4]
-            self.xyz = np.divide(self.xyz, (1.0, 1.0, 10000.0))  # % DIVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X&Z
             self.xyz_cm_id = self.cm[:, 0].astype(int)
             self.xyz_width = self.cm.shape[1]
             self.xyz_meta_data = self.cm[:, 4:self.xyz_width]
             self.xyz_point_flags = np.zeros(shape=(1, len(self.xyz)))
             self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz) + 1))
-            self.score_xyz = self.cm[:, [1, 2, 6]]
+            self.score_xyz = self.cm[:, [1, 2, 6]]  # ML SCORE
 
             # 2.0 GENERATE COLORS FOR THE DEPTHS AND SCORES
             colors = np.empty(shape=[self.cm.shape[0], 2], dtype=object)
             for i in range(0, self.cm.shape[0]):
-                colors[i, 0] = self.color_score(self.cm[i, 6])
-                colors[i, 1] = self.color_depth(self.cm[i, 7])
+                colors[i, 0] = self.color_score(self.cm[i, 5])
+                colors[i, 1] = self.color_depth(self.cm[i, 3])
 
-            # ADD COLORS TO CM ARRAY
+            # 2.1 ADD COLORS TO CM ARRAY
             self.cm = np.column_stack((self.cm, colors))
-
-            # print(self.cm[0, :])
 
             # 3.0 DIVIDE RECORDS INTO BAD, UNCERTAIN, GOOD (BASED ON ML SCORE)
 
             # 3.1 MAKE NUMPY ARRAY WITH BAD SCORES
             scored_bad = self.cm[self.cm[:, 6] <= bad_th]
-            print(np.shape(scored_bad))
 
             # 3.2 MAKE NUMPY ARRAY WITH UNCERTAIN SCORES
             scored_uncertain = self.cm[self.cm[:, 6] > bad_th]
             scored_uncertain = scored_uncertain[scored_uncertain[:, 6] <= uncertain_th]
-            print(np.shape(scored_uncertain))
 
             # 3.3 MAKE NUMPY ARRAY WITH GOOD SCORES
             scored_good = self.cm[self.cm[:, 6] > uncertain_th]
-            print(np.shape(scored_good))
-
-            print(self.cm)
 
             # 4.0 LOAD CM DATA INTO THE HTML WINDOW
 
@@ -596,14 +558,68 @@ class PyCMeditor(wx.Frame):
                                                                callback=callback2,
                                                                disableClusteringAtZoom=self.zoom_level))
 
+            # IMPORT PREDICTED GRID
+            lon, lat = self.get_centeroid(self.cm[:, 1:3])
+            epsg_code = self.convert_wgs_to_utm_epsg_code(lon, lat)
+            self.get_predicted(epsg_code)
+
             # SAVE AND DISPLAY THE NEW FOLIUM MAP (INCLUDING THE .cm FILE)
+            self.set_map_location()
             self.folium_map.save("Py-CMeditor.html")
             self.browser.Reload()
+
 
         except IndexError:
             error_message = "ERROR IN LOADING PROCESS - FILE MUST BE ASCII SPACE DELIMITED"
             wx.MessageDialog(self, -1, error_message, "Load Error")
             raise
+
+    def set_map_location(self):
+        map_name = self.folium_map.get_name()
+        r, lt = self.browser.RunScript(str(map_name) + '.getCenter()["lat"]')
+        r, ln = self.browser.RunScript(str(map_name) + '.getCenter()["lng"]')
+        r, zoom = self.browser.RunScript(str(map_name) + '.getZoom()')
+        self.folium_map.options['zoom'] = zoom
+        self.folium_map.location = [lt, ln]
+
+
+    def get_centeroid(self, arr):
+        length = arr.shape[0]
+        sum_x = np.sum(arr[:, 0])
+        sum_y = np.sum(arr[:, 1])
+        return sum_x/length, sum_y/length
+
+    def convert_wgs_to_utm_epsg_code(self, lon, lat):
+        utm_band = str((m.floor((lon + 180) / 6) % 60) + 1)
+        if len(utm_band) == 1:
+            utm_band = '0' + utm_band
+        if lat >= 0:
+            epsg_code = '326' + utm_band
+        else:
+            epsg_code = '327' + utm_band
+        return epsg_code
+
+    def get_predicted(self, epsg_code):
+        msg = "Please wait while we process your request..."
+        self.busyDlg = wx.BusyInfo(msg)
+
+        try:
+            #  SAVE CM AS INPUT XYZ FOR BASH SCRIPT'
+            cm_file = self.cm[:, 1:4]
+            np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
+
+            # RUN BASH SCRIPT '
+            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename, epsg_code])
+
+            # LOAD CURRENT GRID XYZ POINTS
+            self.predicted_xyz = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
+
+            # LOAD DIFFERENCE CM
+            self.difference_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
+
+        except AttributeError:
+            print("ERROR: no .cm file loaded")
+        self.busyDlg = None
 
     def delete_cm_file(self):
         """
@@ -653,7 +669,8 @@ class PyCMeditor(wx.Frame):
         output_filename = save_file_dialog.GetPath()
 
         # 3.0 SAVE .cm TO DISC
-        np.savetxt(output_filename, self.cm[:, 0:10], fmt="%1d %1.6f %1.6f %1.1f %1d %1d %1d %1.1f %1.16f %1d")
+        print(self.cm[1, :])
+        np.savetxt(output_filename, self.cm[:, 0:9], fmt="%1d %4.6f %4.6f %4.16f %1d %1d %1d %1.1f %1.1f")
 
     def list_item_selected(self, event):
         """ACTIVATED WHEN A FILE FROM THE LIST CONTROL IS SELECTED"""
@@ -677,37 +694,11 @@ class PyCMeditor(wx.Frame):
     def open_predicted_cm_file(self, event):
         pass
 
-    def get_predicted(self, event):
-        msg = "Please wait while we process your request..."
-        self.busyDlg = wx.BusyInfo(msg)
-
-        try:
-            #  SAVE CM AS INPUT XYZ FOR BASH SCRIPT'
-            cm_file = self.cm[:, 1:4]
-            np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
-
-            # RUN BASH SCRIPT '
-            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename])
-
-            # LOAD CURRENT GRID XYZ POINTS
-            self.predicted_cm = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-
-            # IVIDE TO MAKE Z SCALE ON SAME ORDER OF MAG AS X & Z
-            self.predicted_xyz = np.divide(self.predicted_cm, (1.0, 1.0, 10000.0))
-
-            # LOAD DIFFERENCE CM
-            self.diff_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-
-            # DIVIDE TO MAKE THE Z-SCALE A SIMILAR ORDER OF MAGNITUDE AS X & Y
-            self.difference_xyz = np.divide(self.diff_xyz, (1.0, 1.0, 10000.0))
-
-        except AttributeError:
-            print("ERROR: no .cm file loaded")
-        self.busyDlg = None
-
     def regrid(self, event):
         # STEP 1: WRITE OUT TMP CM FILE
-        np.savetxt('current_cm.tmp', self.cm[:, 0:8], fmt="%1d %1.6f %1.6f %1.1f %1d %1d %1d %1.1f")
+        self.cm_out= np.copy(self.cm)
+        self.cm_out
+        np.savetxt('current_cm.tmp', self.cm_out[:, 0:8], fmt="%1d %4.6f %4.6f %4.16f %1d %1d %1d %1.1f")
 
         # RUN BASH SCRIPT FOR REGRIDDING
         subprocess.run(["bash", self.cwd + '/' + 'regrid.sh', self.cwd + '/' + 'current_cm.tmp'])
@@ -788,20 +779,25 @@ class PyCMeditor(wx.Frame):
         with open(output_prefix+'.geojson', 'w') as f:
             geojson.dump(output_geojson_file, f)
 
-    def button_three(self, event):
-        """OPEN 3D VEIWER"""
-        self.plot_three_dim()
-        # self.SetTitle("STL File Viewer: " + self.p1.filename)
-        # self.statusbar.SetStatusText("Use W,S,F,R keys and mouse to interact with the model ")
-
     def plot_three_dim(self, event):
         """
         PLOT 3D VIEW OF DATA
+
+        inputs::
+
+        self.cm =
+        self.xyz =
+        self.xyz_cm_id =
+        self.xyz_meta_data =
+        self.xyz_cm_line_number =
+        self.predicted_xyz =
+        self.difference_xyz =
+        self.score_xyz =
         """
 
         # OPEN A vtk 3D VIEWER WINDOW AND CREATE A RENDER'
         self.tdv = ThreeDimViewer(self, -1, 'Modify Current Model', self.cm, self.xyz, self.xyz_cm_id,
-                                  self.xyz_meta_data, self.xyz_cm_line_number, self.predicted_xyz, self.diff_xyz,
+                                  self.xyz_meta_data, self.xyz_cm_line_number, self.predicted_xyz,
                                   self.difference_xyz, self.score_xyz)
         self.tdv.Show(True)
 
@@ -824,7 +820,7 @@ class PyCMeditor(wx.Frame):
     def flag_points_using_polygons(self, event):
         """Flag all points that fall within the user defined polygons"""
 
-        # 1.0 STEP UP INPUT POINTS AND GET CURRENT FLAG VALUES
+        # 1.0 STEP UP INPUT POINTS
         self.input_points = gpd.GeoDataFrame(geometry=gpd.points_from_xy(self.cm[:, 1], self.cm[:, 2]))
 
         # 2.0 GET POLYGONS
@@ -838,11 +834,9 @@ class PyCMeditor(wx.Frame):
         for i in range(len(self.fc.features)):
             # 3.1 GET POLYGON COORDINATES
             self.polygon = Polygon(self.fc.features[i]['geometry']['coordinates'][0])
-            print(self.polygon)
             # 3.2 LOOP OVER EACH INPUT POINT
             self.output_result[:, i] = self.input_points.within(self.polygon)
 
-        print(self.output_result)
         # 5.0 CHECK IF A POINT IS IN ANY OF THE POLYGONS. IF TRUE THEN SET THE POINT FLAG AS A 1
         for i in range(len(self.output_result)):
             for p in range(np.shape(self.output_result)[1]):
@@ -937,8 +931,8 @@ class OpenCmDialog(wx.Dialog):
         self.uncertain_scores_text = wx.StaticText(self.floating_panel, -1, "Uncertain threshold: ")
 
         # 3. THRESHOLD INPUT BOXES
-        self.bad_th_text = wx.TextCtrl(self.floating_panel, -1, "0", size=(100, -1))
-        self.uncertain_th_text = wx.TextCtrl(self.floating_panel, -1, "0", size=(100, -1))
+        self.bad_th_text = wx.TextCtrl(self.floating_panel, -1, "0.1", size=(100, -1))
+        self.uncertain_th_text = wx.TextCtrl(self.floating_panel, -1, "0.2", size=(100, -1))
 
         # 4. LINE SPACER 2
         self.line2 = (wx.StaticLine(self.floating_panel), 0, wx.ALL | wx.EXPAND, 5)
@@ -990,6 +984,38 @@ class OpenCmDialog(wx.Dialog):
         self.regular_load_button = False
         self.EndModal(1)
 
+    def redraw(self):
+        """REDRAW THE CM POINT DATA ON THEE MAP AFTER APPLYING FLAGS TO THE DATA WITHIN USER DERIVED POLYGONS"""
+        # 1.0 GENERATE NEW COLORS FOR THE DEPTHS (FLAGGED= -9999)
+        colors = np.empty(shape=[self.cm.shape[0], 1], dtype=object)
+        for i in range(0, self.cm.shape[0]):
+            colors[i, 1] = self.color_depth(self.cm[i, 3])
+
+        # 1.1 ADD COLORS TO CM ARRAY
+        self.cm[:, 7] = colors
+
+        # 3.0 DIVIDE RECORDS INTO BAD, UNCERTAIN, GOOD (BASED ON ML SCORE)
+        scored_bad = self.cm[self.cm[:, 6] <= self.bad_th]
+        bad_list = scored_bad[:, (2, 1, 9, 6)].tolist()
+
+        scored_uncertain = self.cm[self.cm[:, 6] > self.bad_th]
+        scored_uncertain = scored_uncertain[scored_uncertain[:, 6] <= self.uncertain_th]
+        uncertain_list = scored_uncertain[:, (2, 1, 9, 6)].tolist()
+
+        # 3.3 MAKE NUMPY ARRAY WITH GOOD SCORES
+        scored_good = self.cm[self.cm[:, 6] > self.uncertain_th]
+        scored_good = scored_good[:, (2, 1, 9, 6)].tolist()
+
+        # 4.0 GET THE CURRENT JAVA SCRIPT OBJECTS DATA POINTERS
+        bad_fg_data_java_pointer = self.bad_fg._children[list(self.bad_fg._children.keys())[0]].data
+        uncertain_fg_java_pointer = self.uncertain_fg._children[list(self.uncertain_fg._children.keys())[0]].data
+        good_fg_java_pointer = self.good_fg._children[list(self.good_fg._children.keys())[0]].data
+
+        # CREATE NEW DATA ARRAY
+        new_bad_data = [list(i) for i in zip(g.cm[:, 2], g.cm[:, 3], g.cm[:, 4], g.cm[:, 9])]
+
+        # INSET NEW DATA INTO JAVA OBJECT
+        self.bad_fg._children[list(self.bad_fg._children.keys())[0]].data = new_bad_data
 
 class SavePolygonsDialog(wx.Dialog):
     """
