@@ -464,6 +464,7 @@ class PyCMeditor(wx.Frame):
                 #  GET THE FILE NAME FROM FileDialog WINDOW
                 self.cm_file = open_file_dialog.GetPath()
                 self.cm_filename = open_file_dialog.Filename
+                self.cm_dir = open_file_dialog.Directory
 
                 # SET THE CLUSTER ZOOM LEVEL TERMINATION
                 if open_cm_dialogbox.regular_load_button is True:
@@ -476,6 +477,7 @@ class PyCMeditor(wx.Frame):
 
     def load_cm_file_as_cluster(self, bad_th, uncertain_th):
         """LOAD .cm FILE AND PLOT AS CLUSTERS"""
+        # CM format:
         try:
             # 1.0 OPEN THE .cm FILE USING NUMPY
             self.cm = np.genfromtxt(self.cm_file, delimiter=' ', filling_values=-9999)
@@ -492,7 +494,7 @@ class PyCMeditor(wx.Frame):
             # 2.0 GENERATE COLORS FOR THE DEPTHS AND SCORES
             colors = np.empty(shape=[self.cm.shape[0], 2], dtype=object)
             for i in range(0, self.cm.shape[0]):
-                colors[i, 0] = self.color_score(self.cm[i, 5])
+                colors[i, 0] = self.color_score(self.cm[i, 6])
                 colors[i, 1] = self.color_depth(self.cm[i, 3])
 
             # 2.1 ADD COLORS TO CM ARRAY
@@ -536,25 +538,25 @@ class PyCMeditor(wx.Frame):
                          'return circle};')
 
             # CREATE CLUSTER OBJECTS
-            self.bad_fg.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 9, 6)]).tolist(),
+            self.bad_fg.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 7, 6)]).tolist(),
                                                     callback=callback, disableClusteringAtZoom=self.zoom_level))
 
-            self.uncertain_fg.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 9, 6)]).tolist(),
+            self.uncertain_fg.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 7, 6)]).tolist(),
                                                           callback=callback, disableClusteringAtZoom=self.zoom_level))
 
-            self.good_fg.add_child(FastMarkerCluster((scored_good[:, (2, 1, 9, 6)]).tolist(),
+            self.good_fg.add_child(FastMarkerCluster((scored_good[:, (2, 1, 7, 6)]).tolist(),
                                                      callback=callback, disableClusteringAtZoom=self.zoom_level))
 
             # CREATE DEPTH DIFFERENCE CLUSTER OBJECTS
-            self.bad_fg_depthdiff.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 10, 8)]).tolist(),
+            self.bad_fg_depthdiff.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 8, 3)]).tolist(),
                                                               callback=callback2,
                                                               disableClusteringAtZoom=self.zoom_level))
 
-            self.uncertain_fg_depthdiff.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 10, 8)]).tolist(),
+            self.uncertain_fg_depthdiff.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 8, 3)]).tolist(),
                                                                     callback=callback2,
                                                                     disableClusteringAtZoom=self.zoom_level))
 
-            self.good_fg_depthdiff.add_child(FastMarkerCluster((scored_good[:, (2, 1, 10, 8)]).tolist(),
+            self.good_fg_depthdiff.add_child(FastMarkerCluster((scored_good[:, (2, 1, 8, 3)]).tolist(),
                                                                callback=callback2,
                                                                disableClusteringAtZoom=self.zoom_level))
 
@@ -609,7 +611,8 @@ class PyCMeditor(wx.Frame):
             np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
 
             # RUN BASH SCRIPT '
-            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename, epsg_code])
+            #subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cwd + '/' + self.cm_filename, epsg_code])
+            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cm_dir + '/' + self.cm_filename, epsg_code])
 
             # LOAD CURRENT GRID XYZ POINTS
             self.predicted_xyz = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
