@@ -4,6 +4,6 @@ xgboost/.ipynb*
 xgboost/nohup.out
 xgboost/*.model
 xgboost/*.npy
-*/__pycache__/*
-Py-CMeditor.html
+human_editing/GUI/__pycache__/*
+human_editing/GUI/Py-CMeditor.html
 *tmp*
