@@ -479,7 +479,7 @@ class PyCMeditor(wx.Frame):
 
     def load_cm_file_as_cluster(self, bad_th, uncertain_th):
         """LOAD .cm FILE AND PLOT AS CLUSTERS"""
-        # CM format:
+        # CM format: ID, Lon, Lat, Depth, SIG H, SIG D, SID, pred, score
         try:
             # 1.0 OPEN THE .cm FILE USING NUMPY
             self.cm = np.genfromtxt(self.cm_file, delimiter=' ', filling_values=-9999)
@@ -491,12 +491,12 @@ class PyCMeditor(wx.Frame):
             self.xyz_meta_data = self.cm[:, 4:self.xyz_width]
             self.xyz_point_flags = np.zeros(shape=(1, len(self.xyz)))
             self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz) + 1))
-            self.score_xyz = self.cm[:, [1, 2, 5]]  # ML SCORE
+            self.score_xyz = self.cm[:, [1, 2, 8]]  # ML SCORE
 
             # 2.0 GENERATE COLORS FOR THE DEPTHS AND SCORES
             colors = np.empty(shape=[self.cm.shape[0], 2], dtype=object)
             for i in range(0, self.cm.shape[0]):
-                colors[i, 0] = self.color_score(self.cm[i, 5])
+                colors[i, 0] = self.color_score(self.cm[i, 8])
                 colors[i, 1] = self.color_depth(self.cm[i, 3])
 
             # 2.1 ADD COLORS TO CM ARRAY
@@ -505,14 +505,14 @@ class PyCMeditor(wx.Frame):
             # 3.0 DIVIDE RECORDS INTO BAD, UNCERTAIN, GOOD (BASED ON ML SCORE)
 
             # 3.1 MAKE NUMPY ARRAY WITH BAD SCORES
-            scored_bad = self.cm[self.cm[:, 5] <= bad_th]
+            scored_bad = self.cm[self.cm[:, 8] <= bad_th]
 
             # 3.2 MAKE NUMPY ARRAY WITH UNCERTAIN SCORES
-            scored_uncertain = self.cm[self.cm[:, 5] > bad_th]
-            scored_uncertain = scored_uncertain[scored_uncertain[:, 5] <= uncertain_th]
+            scored_uncertain = self.cm[self.cm[:, 8] > bad_th]
+            scored_uncertain = scored_uncertain[scored_uncertain[:, 8] <= uncertain_th]
 
             # 3.3 MAKE NUMPY ARRAY WITH GOOD SCORES
-            scored_good = self.cm[self.cm[:, 5] > uncertain_th]
+            scored_good = self.cm[self.cm[:, 8] > uncertain_th]
 
             # 4.0 LOAD CM DATA INTO THE HTML WINDOW
 
@@ -544,15 +544,15 @@ class PyCMeditor(wx.Frame):
                                                      callback=callback, disableClusteringAtZoom=self.zoom_level))
 
             # CREATE DEPTH DIFFERENCE CLUSTER OBJECTS
-            self.bad_fg_depthdiff.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 10, 8)]).tolist(),
+            self.bad_fg_depthdiff.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 10, 7)]).tolist(),
                                                               callback=callback2,
                                                               disableClusteringAtZoom=self.zoom_level))
 
-            self.uncertain_fg_depthdiff.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 10, 8)]).tolist(),
+            self.uncertain_fg_depthdiff.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 10, 7)]).tolist(),
                                                                     callback=callback2,
                                                                     disableClusteringAtZoom=self.zoom_level))
 
-            self.good_fg_depthdiff.add_child(FastMarkerCluster((scored_good[:, (2, 1, 10, 8)]).tolist(),
+            self.good_fg_depthdiff.add_child(FastMarkerCluster((scored_good[:, (2, 1, 10, 7)]).tolist(),
                                                                callback=callback2,
                                                                disableClusteringAtZoom=self.zoom_level))
 
