@@ -4,6 +4,7 @@ This repository holds the software for the batheymetry data editing software use
 and his students, working in collaboration with [Yoav Freund](https://cseweb.ucsd.edu/~yfreund/) and his students.
 
 ## Organization of the software
+tmp
 
 The raw data is in `.cm` files. There is a master index file called `sid_filelist.txt`
 
