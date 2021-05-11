@@ -670,10 +670,14 @@ class PyCMeditor(wx.Frame):
         np.savetxt(output_filename, self.cm[:, 0:9], fmt="%1d %4.6f %4.6f %4.16f %1d %1d %1d %1.1f %1.1f")
 
     def update_thresholds(self, event):
-        new_lower_threshold = self.ctrl_lower_threshold.GetValue()
-        new_upper_threshold = self.ctrl_upper_threshold.GetValue()
-        print(new_lower_threshold)
-        print(new_upper_threshold)
+        """REDRAW THE SCORES AFTER THE USER UPDATES THE THRESHOLDS"""
+
+        # GET NEW THRESHOLDS
+        self.bad_th = float(self.ctrl_lower_threshold.GetValue())
+        self.uncertain_th = float(self.ctrl_upper_threshold.GetValue())
+
+        # REDRAW THE POINT DATA
+        self.redraw_cm_cluster()
 
     def set_map_location(self):
         """FUNCTION TO KEEP THE MAP IN THE SAME LOCATION WHEN REFRESHING THE HTML PAGE"""
