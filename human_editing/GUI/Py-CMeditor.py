@@ -88,7 +88,7 @@ class PyCMeditor(wx.Frame):
     # INITIALISE GUI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, None, wx.ID_ANY, 'Py-CMeditor', size=(1800, 1050))
+        wx.Frame.__init__(self, None, wx.ID_ANY, 'Py-CMeditor', size=(1800, 1050),pos=(900,0))
 
         # GET CURRENT WORKING DIR
         self.cwd = os.path.dirname(os.path.realpath(__file__))
@@ -114,10 +114,10 @@ class PyCMeditor(wx.Frame):
         self.left_panel.SetMinimumPaneSize(1)
         self.left_panel.SetBackgroundColour('white')
 
-        self.left_panel_top = wx.Panel(self.left_panel, -1, size=(115, 100), style=wx.ALIGN_RIGHT)
-        self.left_panel_bottom = wx.Panel(self.left_panel, -1, size=(115, 900), style=wx.ALIGN_RIGHT)
+        self.left_panel_top = wx.Panel(self.left_panel, -1, size=(115, 600), style=wx.ALIGN_RIGHT)
+        self.left_panel_bottom = wx.Panel(self.left_panel, -1, size=(115, 400), style=wx.ALIGN_RIGHT)
 
-        self.left_panel.SplitHorizontally(self.left_panel_top, self.left_panel_bottom, 100)
+        self.left_panel.SplitHorizontally(self.left_panel_top, self.left_panel_bottom, 600)
 
         # CREATE PANEL TO FILL WITH INTERACTIVE MAP
         self.right_panel_bottom = wx.Panel(self, -1, size=(1700, 900), style=wx.ALIGN_RIGHT)
@@ -173,6 +173,7 @@ class PyCMeditor(wx.Frame):
 
         # MAXIMIZE FRAME
         #self.Maximize()
+        #self.Centre()
 
         # INITIALISE THREE DIMENSION VIEWER OBJECTS
         self.predicted_xyz = None
@@ -275,10 +276,11 @@ class PyCMeditor(wx.Frame):
                                      tiles=None)
 
         # ADD SRTM15+ TILES
-        #self.tiles = folium.TileLayer(tiles='/Volumes/External_B/SRTM_tiles/{z}/{x}/{y}.png',
-        #                              name='SRTM15+V2.1', attr='SRTM15+V2.1', overlay=True, control=True, show=False)
-        self.tiles = folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}.png',
-                                      name='Test', attr='Test', overlay=True, control=True, show=True)
+        self.tiles = folium.TileLayer(tiles='/swot2/pycmeditor_grids/SRTM_tiles/{z}/{x}/{y}.png',
+                                      name='SRTM15+V2.1', attr='SRTM15+V2.1', overlay=True, control=True, show=True)
+#        self.tiles = folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}.png',
+#                                      name='Test', attr='Test', overlay=True, control=True, show=True)
+
         self.tiles.add_to(self.folium_map)
 
         #self.regridded = folium.TileLayer(tiles='',  name='Regrid', attr='regridded', overlay=False, control=False)
@@ -421,7 +423,7 @@ class PyCMeditor(wx.Frame):
     def color_score(self, value):
         """SET COLOR FOR POINT PLOTTING"""
         if value != -9999:
-            cmap = plt.cm.get_cmap('RdYlBu')
+            cmap = plt.cm.get_cmap('bwr')
             norm = plt.Normalize(0.0, 1.0)
             rgb = cmap(norm(value))[:3]
         else:
@@ -557,9 +559,9 @@ class PyCMeditor(wx.Frame):
                                                                disableClusteringAtZoom=self.zoom_level))
 
             # IMPORT PREDICTED GRID
-            lon, lat = self.get_centeroid(self.cm[:, 1:3])
-            epsg_code = self.convert_wgs_to_utm_epsg_code(lon, lat)
-            self.get_predicted(epsg_code)
+            #lon, lat = self.get_centeroid(self.cm[:, 1:3])
+            #epsg_code = self.convert_wgs_to_utm_epsg_code(lon, lat)
+            #self.get_predicted(epsg_code)
 
             # SAVE AND DISPLAY THE NEW FOLIUM MAP (INCLUDING THE .cm FILE)
             self.set_map_location()
