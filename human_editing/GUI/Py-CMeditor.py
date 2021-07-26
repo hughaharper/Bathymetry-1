@@ -1012,7 +1012,7 @@ class OpenCmDialog(wx.Dialog):
         good_fg_java_pointer = self.good_fg._children[list(self.good_fg._children.keys())[0]].data
 
         # CREATE NEW DATA ARRAY
-        new_bad_data = [list(i) for i in zip(g.cm[:, 2], g.cm[:, 3], g.cm[:, 4], g.cm[:, 9])]
+        new_bad_data = [list(i) for i in zip(self.cm[:, 2], self.cm[:, 3], self.cm[:, 4], self.cm[:, 9])]
 
         # INSET NEW DATA INTO JAVA OBJECT
         self.bad_fg._children[list(self.bad_fg._children.keys())[0]].data = new_bad_data
