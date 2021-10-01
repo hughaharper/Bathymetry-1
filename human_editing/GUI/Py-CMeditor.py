@@ -276,7 +276,7 @@ class PyCMeditor(wx.Frame):
                                      tiles=None)
 
         # ADD SRTM15+ TILES
-        self.tiles = folium.TileLayer(tiles='/Users/brook/PROJECTS/ML/Bathymetry/human_editing/8-xyz-tiles/{z}/{x}/{y}.png',
+        self.tiles = folium.TileLayer(tiles='/geosat3/pycmeditor_grids/SRTM_tiles/{z}/{x}/{y}.png',
                                       name='SRTM15+V2.1', attr='SRTM15+V2.1', overlay=True, control=True)
         self.tiles.add_to(self.folium_map)
 
