@@ -127,7 +127,7 @@ class PyCMeditor(wx.Frame):
         # CREATE PANEL FOR PYTHON CONSOLE (USED FOR DEBUGGING AND CUSTOM USAGES)
         self.ConsolePanel = wx.Panel(self, -1, size=(1700, 50), style=wx.ALIGN_LEFT | wx.BORDER_RAISED | wx.EXPAND)
         intro = "###############################################################\r" \
-                "!USE import sys; then sys.Gmg.OBJECT TO ACCESS PROGRAM OBJECTS \r" \
+                "!USE import sys; then sys.t.OBJECT TO ACCESS PROGRAM OBJECTS \r" \
                 "ctrl+up FOR COMMAND HISTORY                                    \r" \
                 "###############################################################"
         py_local = {'__app__': 'gmg Application'}
@@ -246,6 +246,8 @@ class PyCMeditor(wx.Frame):
 
         # SET MENUBAR'
         self.SetMenuBar(self.menubar)
+        macMenu = self.menubar.OSXGetAppleMenu()
+        macMenu.SetTitle("Py-CMeditor")
 
     def create_toolbar(self):
         """CREATE TOOLBAR"""
@@ -361,7 +363,7 @@ class PyCMeditor(wx.Frame):
                                                 style=wx.ALIGN_CENTER)
 
         # BUTTON EIGHT SET FLAGS BASED ON POLYGONS
-        self.button_flag_points_using_polygons = wx.Button(self.left_panel_top, -1, "Set flags", size=(115, 20), 
+        self.button_flag_points_using_polygons = wx.Button(self.left_panel_top, -1, "Set flags", size=(115, 20),
                                                            style=wx.ALIGN_CENTER)
 
         # BUTTON NINE SAVE CM FILE TO DISC
@@ -399,7 +401,7 @@ class PyCMeditor(wx.Frame):
         static_line_0 = wx.StaticLine(self.left_panel_top, wx.ID_ANY)
         self.left_box_top_sizer.Add(static_line_0, 0, wx.ALL | wx.EXPAND, 1)
 
-        font = wx.Font(16, wx.DECORATIVE, wx.BOLD, wx.NORMAL)
+        font = wx.Font(16, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         save_load_title_text = wx.StaticText(self.left_panel_top, wx.ID_ANY, label="File I/O", size=(115, -1),
                                              style=wx.ALIGN_CENTER)
         save_load_title_text.SetFont(font)
