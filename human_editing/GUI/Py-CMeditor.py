@@ -28,7 +28,7 @@ import geopandas as gpd
 import time
 from threading import Timer
 # to-do vtk.vtkRadiusOutlierRemoval
-mpl.use('WXAgg')
+mpl.use('wxAgg')
 
 """
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1022,7 +1022,6 @@ class PyCMeditor(wx.Frame):
         result = dlg.ShowModal()
         if result == wx.ID_OK:
             self.Destroy()
-            wx.GetApp().ExitMainLoop()
 
     def on_close_button(self, event):
         """# SHUTDOWN APP (X BUTTON)"""
@@ -1030,7 +1029,6 @@ class PyCMeditor(wx.Frame):
         result = dlg.ShowModal()
         if result == wx.ID_OK:
             self.Destroy()
-            wx.GetApp().ExitMainLoop()
 
 
 # DIALOGS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1214,7 +1212,6 @@ class MessageDialog(wx.MessageDialog):
 # START SOFTWARE
 if __name__ == "__main__":
     app = wx.App(False)
-    fr = wx.Frame(None, title='Py-CMeditor')
     app.frame = PyCMeditor()
     app.frame.CenterOnScreen()
     app.frame.Show()
