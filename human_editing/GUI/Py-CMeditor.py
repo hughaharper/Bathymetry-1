@@ -91,6 +91,7 @@ class PyCMeditor(wx.Frame):
     def __init__(self, *args, **kwds):
         wx.Frame.__init__(self, None, wx.ID_ANY, 'Py-CMeditor', size=(1800, 1050))
 
+        noLog = wx.LogNull()
         # GET CURRENT WORKING DIR
         self.cwd = os.path.dirname(os.path.realpath(__file__))
 
@@ -320,7 +321,8 @@ class PyCMeditor(wx.Frame):
         self.folium_map.save("Py-CMeditor.html")
 
         # CREATE GUI HTML WINDOW
-        self.browser = wx.html2.WebView.New(self.right_panel_bottom, -1)
+        self.browser = wx.html2.WebView.New()
+        self.browser.Create(self.right_panel_bottom, -1)
 
         # LOAD FOLIUM MAP INTO WXPYTHON HTML WINDOW
         self.browser.LoadURL(self.cwd + '/Py-CMeditor.html')
