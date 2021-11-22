@@ -626,53 +626,6 @@ class PyCMeditor(wx.Frame):
             wx.MessageDialog(self, -1, error_message, "Load Error")
             raise
 
-    def set_map_location(self):
-        map_name = self.folium_map.get_name()
-        r, lt = self.browser.RunScript(str(map_name) + '.getCenter()[\'lat\']')
-        r, ln = self.browser.RunScript(str(map_name) + '.getCenter()[\'lng\']')
-        r, zoom = self.browser.RunScript(str(map_name) + '.getZoom()')
-        self.folium_map.options['zoom'] = zoom
-        self.folium_map.location = [lt, ln]
-
-
-    def get_centeroid(self, arr):
-        length = arr.shape[0]
-        sum_x = np.sum(arr[:, 0])
-        sum_y = np.sum(arr[:, 1])
-        return sum_x/length, sum_y/length
-
-    def convert_wgs_to_utm_epsg_code(self, lon, lat):
-        utm_band = str((m.floor((lon + 180) / 6) % 60) + 1)
-        if len(utm_band) == 1:
-            utm_band = '0' + utm_band
-        if lat >= 0:
-            epsg_code = '326' + utm_band
-        else:
-            epsg_code = '327' + utm_band
-        return epsg_code
-
-    def get_predicted(self, epsg_code):
-        msg = "Please wait while we process your request..."
-        self.busyDlg = wx.BusyInfo(msg)
-
-        try:
-            #  SAVE CM AS INPUT XYZ FOR BASH SCRIPT'
-            cm_file = self.cm[:, 1:4]
-            np.savetxt('input.xyz', cm_file, delimiter=" ", fmt="%10.6f %10.6f %10.6f")
-
-            # RUN BASH SCRIPT
-            subprocess.run(["bash", self.cwd + '/' + 'get_predicted.sh', self.cm_dir + '/' + self.cm_filename, epsg_code])
-
-            # LOAD CURRENT GRID XYZ POINTS
-            self.predicted_xyz = np.genfromtxt('predicted.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-
-            # LOAD DIFFERENCE CM
-            self.difference_xyz = np.genfromtxt('difference.xyz', delimiter=' ', dtype=float, filling_values=-9999)
-
-        except AttributeError:
-            print("ERROR: no .cm file loaded")
-        self.busyDlg = None
-
     def delete_cm_file(self):
         """
         DELETE CURRENT .cm FILE SO THE NEWLY SELECTED .cm FILE CAN BE LOADED INTO THE VIEWERS
@@ -1083,7 +1036,6 @@ class PyCMeditor(wx.Frame):
 
 
 # DIALOGS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 class OpenCmDialog(wx.Dialog):
     """
