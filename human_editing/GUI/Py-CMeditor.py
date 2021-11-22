@@ -248,6 +248,8 @@ class PyCMeditor(wx.Frame):
 
         # SET MENUBAR'
         self.SetMenuBar(self.menubar)
+        macMenu = self.menubar.OSXGetAppleMenu()
+        macMenu.SetTitle("Py-CMeditor")
 
     def create_toolbar(self):
         """CREATE TOOLBAR"""
@@ -405,7 +407,7 @@ class PyCMeditor(wx.Frame):
         static_line_0 = wx.StaticLine(self.left_panel_top, wx.ID_ANY)
         self.left_box_top_sizer.Add(static_line_0, 0, wx.ALL | wx.EXPAND, 1)
 
-        font = wx.Font(16, wx.DECORATIVE, wx.BOLD, wx.NORMAL)
+        font = wx.Font(16, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         save_load_title_text = wx.StaticText(self.left_panel_top, wx.ID_ANY, label="File I/O", size=(115, -1),
                                              style=wx.ALIGN_CENTER)
         save_load_title_text.SetFont(font)

@@ -1,2 +1,4 @@
 *.cm
 *.nc
+__pycache__/
+*.html
