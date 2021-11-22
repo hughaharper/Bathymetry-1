@@ -89,7 +89,7 @@ class PyCMeditor(wx.Frame):
     # INITIALISE GUI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, None, wx.ID_ANY, 'Py-CMeditor', size=(1800, 1050),pos=(900,0))
+        wx.Frame.__init__(self, None, wx.ID_ANY, 'Py-CMeditor', size=(900, 800))
 
         noLog = wx.LogNull()
         # GET CURRENT WORKING DIR
@@ -278,10 +278,10 @@ class PyCMeditor(wx.Frame):
                                      tiles=None)
 
         # ADD SRTM15+ TILES
-        self.tiles = folium.TileLayer(tiles='/swot2/pycmeditor_grids/SRTM_tiles/{z}/{x}/{y}.png',
-                                      name='SRTM15+V2.1', attr='SRTM15+V2.1', overlay=True, control=True, show=True)
-#        self.tiles = folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}.png',
-#                                      name='Test', attr='Test', overlay=True, control=True, show=True)
+#        self.tiles = folium.TileLayer(tiles='/swot2/pycmeditor_grids/SRTM_tiles/{z}/{x}/{y}.png',
+#                                      name='SRTM15+V2.1', attr='SRTM15+V2.1', overlay=True, control=True, show=True)
+        self.tiles = folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}.png',
+                                      name='Test', attr='Test', overlay=True, control=True, show=True)
 
         self.tiles.add_to(self.folium_map)
 
@@ -367,7 +367,7 @@ class PyCMeditor(wx.Frame):
                                                 style=wx.ALIGN_CENTER)
 
         # BUTTON EIGHT SET FLAGS BASED ON POLYGONS
-        self.button_flag_points_using_polygons = wx.Button(self.left_panel_top, -1, "Set flags", size=(115, 20), 
+        self.button_flag_points_using_polygons = wx.Button(self.left_panel_top, -1, "Set flags", size=(115, 20),
                                                            style=wx.ALIGN_CENTER)
 
         # BUTTON NINE SAVE CM FILE TO DISC
@@ -1195,7 +1195,6 @@ class OpenCmDialog(wx.Dialog):
 
         # INSET NEW DATA INTO JAVA OBJECT
         self.bad_fg._children[list(self.bad_fg._children.keys())[0]].data = new_bad_data
->>>>>>> 3676ea71004c963d38e06096422589033ff0025e
 
 class SavePolygonsDialog(wx.Dialog):
     """
