@@ -526,39 +526,38 @@ class PyCMeditor(wx.Frame):
         try:
             # 1.0 OPEN THE .cm FILE USING NUMPY
             if self.cm_filename.endswith('.cm'): # ends with *.cm, assume it's ascii...
-                self.cm = np.genfromtxt(self.cm_file, delimiter=' ', usecols=(1,2,3,7,8) filling_values=-9999)
+                self.cm = np.genfromtxt(self.cm_file, delimiter=' ', usecols=(1,2,3,7,8), filling_values=-9999)
             else:
                 with open(self.cm_file,'rb') as pkl_file:
                     self.cm = pkl.load(pkl_file)
 
             # 1.1 SAVE XYZ OBJECTS FOR 3D VIEWER
             self.xyz = self.cm[:, 1:4]
-            self.xyz_cm_id = self.cm[:, 0].astype(int)
+            self.xyz_cm_id = np.zeros_like(self.cm[:,0])
             self.xyz_width = self.cm.shape[1]
-            self.xyz_meta_data = self.cm[:, 4:self.xyz_width]
-            self.xyz_point_flags = np.zeros(shape=(1, len(self.xyz)))
+            self.xyz_meta_data = np.zeros_like(self.cm[:,0])
             self.xyz_cm_line_number = np.linspace(0, len(self.xyz), (len(self.xyz) + 1))
-            self.score_xyz = self.cm[:, [1, 2, 8]]  # ML SCORE
+            self.score_xyz = self.cm[:, [0, 1, 4]]  # ML SCORE
 
             # 2.0 GENERATE COLORS FOR THE DEPTHS AND SCORES
             colors = np.empty(shape=[self.cm.shape[0], 2], dtype=object)
             for i in range(0, self.cm.shape[0]):
-                colors[i, 0] = self.color_score(self.cm[i, 5], self.cm[i, 4])
-                colors[i, 1] = self.color_depth(self.cm[i, 3], self.cm[i, 4])
+                colors[i, 0] = self.color_score(self.cm[i, 4], 0)
+                colors[i, 1] = self.color_depth(self.cm[i, 2] - self.cm[i, 3], 0)
 
             # 2.1 ADD COLORS TO CM ARRAY
-            self.cm = np.column_stack((self.cm, colors))
+            self.cm = np.column_stack((self.cm, colors, self.cm[:,2] - self.cm[:,3]))
 
             # 3.0 DIVIDE RECORDS INTO BAD, UNCERTAIN, GOOD (BASED ON ML SCORE)
             # 3.1 MAKE NUMPY ARRAY WITH BAD SCORES
-            scored_bad = self.cm[self.cm[:, 5] <= bad_th]
+            scored_bad = self.cm[self.cm[:, 4] <= bad_th]
 
             # 3.2 MAKE NUMPY ARRAY WITH UNCERTAIN SCORES
-            scored_uncertain = self.cm[self.cm[:, 5] > bad_th]
-            scored_uncertain = scored_uncertain[scored_uncertain[:, 5] <= uncertain_th]
+            scored_uncertain = self.cm[self.cm[:, 4] > bad_th]
+            scored_uncertain = scored_uncertain[scored_uncertain[:, 4] <= uncertain_th]
 
             # 3.3 MAKE NUMPY ARRAY WITH GOOD SCORES
-            scored_good = self.cm[self.cm[:, 5] > uncertain_th]
+            scored_good = self.cm[self.cm[:, 4] > uncertain_th]
 
             # 4.0 LOAD CM DATA INTO THE HTML WINDOW
 
@@ -580,30 +579,30 @@ class PyCMeditor(wx.Frame):
                          'return circle};')
 
             # CREATE CLUSTER OBJECTS
-            self.bad_fg.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 9)]).tolist(),
+            self.bad_fg.add_child(FastMarkerCluster((scored_bad[:, (1, 0, 5)]).tolist(),
                                                     callback=callback, disableClusteringAtZoom=self.zoom_level))
 
-            self.uncertain_fg.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 9)]).tolist(),
+            self.uncertain_fg.add_child(FastMarkerCluster((scored_uncertain[:, (1, 0, 5)]).tolist(),
                                                           callback=callback, disableClusteringAtZoom=self.zoom_level))
 
-            self.good_fg.add_child(FastMarkerCluster((scored_good[:, (2, 1, 9)]).tolist(),
+            self.good_fg.add_child(FastMarkerCluster((scored_good[:, (1, 0, 5)]).tolist(),
                                                      callback=callback, disableClusteringAtZoom=self.zoom_level))
 
             # CREATE DEPTH DIFFERENCE CLUSTER OBJECTS
-            self.bad_fg_depthdiff.add_child(FastMarkerCluster((scored_bad[:, (2, 1, 10, 7)]).tolist(),
+            self.bad_fg_depthdiff.add_child(FastMarkerCluster((scored_bad[:, (1, 0, 6, 7)]).tolist(),
                                                               callback=callback2,
                                                               disableClusteringAtZoom=self.zoom_level))
 
-            self.uncertain_fg_depthdiff.add_child(FastMarkerCluster((scored_uncertain[:, (2, 1, 10, 7)]).tolist(),
+            self.uncertain_fg_depthdiff.add_child(FastMarkerCluster((scored_uncertain[:, (1, 0, 6, 7)]).tolist(),
                                                                     callback=callback2,
                                                                     disableClusteringAtZoom=self.zoom_level))
 
-            self.good_fg_depthdiff.add_child(FastMarkerCluster((scored_good[:, (2, 1, 10, 7)]).tolist(),
+            self.good_fg_depthdiff.add_child(FastMarkerCluster((scored_good[:, (1, 0, 6, 7)]).tolist(),
                                                                callback=callback2,
                                                                disableClusteringAtZoom=self.zoom_level))
 
             # IMPORT PREDICTED BATHYMETRY GRID IN THE BACKGROUND (FOR USE IN 3D VIEWER)
-            lon, lat = self.get_centeroid(self.cm[:, 1:3])
+            lon, lat = self.get_centeroid(self.cm[:, 0:2])
             epsg_code = self.convert_wgs_to_utm_epsg_code(lon, lat)
             self.get_predicted(epsg_code)
 
@@ -633,7 +632,6 @@ class PyCMeditor(wx.Frame):
         del self.xyz_cm_id
         del self.xyz_width
         del self.xyz_meta_data
-        del self.xyz_point_flags
         del self.xyz_cm_line_number
 
     def open_cm_directory(self, event):
