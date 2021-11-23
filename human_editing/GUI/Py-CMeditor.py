@@ -173,6 +173,8 @@ class PyCMeditor(wx.Frame):
         self.menubar = wx.MenuBar()  # MAIN MENUBAR
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        macMenu = self.menubar.OSXGetAppleMenu()
+        macMenu.SetTitle("&Py-CMeditor")
 
         # FILE MENU
         self.file = wx.Menu()  # CREATE MENUBAR ITEM
@@ -235,8 +237,6 @@ class PyCMeditor(wx.Frame):
 
         # SET MENUBAR'
         self.SetMenuBar(self.menubar)
-        macMenu = self.menubar.OSXGetAppleMenu()
-        macMenu.SetTitle("Py-CMeditor")
 
     def create_toolbar(self):
         """CREATE TOOLBAR"""
@@ -1220,6 +1220,8 @@ class MessageDialog(wx.MessageDialog):
 # START SOFTWARE
 if __name__ == "__main__":
     app = wx.App(False)
+    app.SetAppName("Py-CMeditor")
+    app.SetAppDisplayName("Py-CMeditor")
     app.frame = PyCMeditor()
     app.frame.CenterOnScreen()
     app.frame.Show()
