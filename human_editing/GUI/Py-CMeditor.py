@@ -9,6 +9,7 @@ import json
 import matplotlib as mpl
 import numpy as np
 import math as m
+import pickle as pkl
 import wx
 import wx.py as py
 import wx.lib.agw.aui as aui
@@ -42,24 +43,10 @@ Brook Tozer, SIO IGPP 2018-2020.
 
 **Dependencies**
 
-NumPy
-Matplotlib
-pylab
-wxpython
-VTK
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **References**
-
-***
-
-***
-
-***
-
-***
 
 ***
 Icons where designed using the Free icon Maker.
@@ -473,7 +460,7 @@ class PyCMeditor(wx.Frame):
     def color_score(self, value, flag):
         """SET COLOR FOR POINT PLOTTING"""
         if flag != -9999:
-            cmap = plt.cm.get_cmap('RdYlBu')
+            cmap = plt.cm.get_cmap('bwr')
             norm = plt.Normalize(0.0, 1.0)
             rgb = cmap(norm(value))[:3]
         else:
@@ -527,7 +514,7 @@ class PyCMeditor(wx.Frame):
                 if open_cm_dialogbox.regular_load_button is True:
                     self.zoom_level = 1
                 else:
-                    self.zoom_level = 8
+                    self.zoom_level = 7
 
                 # LOAD THE DATA
                 self.load_cm_file_as_cluster(self.bad_th, self.uncertain_th)
@@ -535,9 +522,14 @@ class PyCMeditor(wx.Frame):
     def load_cm_file_as_cluster(self, bad_th, uncertain_th):
         """LOAD .cm FILE AND PLOT AS CLUSTERS"""
         # CM format: ID, Lon, Lat, Depth, SIG H, SIG D, SID, pred, score
+        # Binary format: Lon, Lat, Depth, pred, score (mean)
         try:
             # 1.0 OPEN THE .cm FILE USING NUMPY
-            self.cm = np.genfromtxt(self.cm_file, delimiter=' ', filling_values=-9999)
+            if self.cm_filename.endswith('.cm'): # ends with *.cm, assume it's ascii...
+                self.cm = np.genfromtxt(self.cm_file, delimiter=' ', usecols=(1,2,3,7,8) filling_values=-9999)
+            else:
+                with open(self.cm_file,'rb') as pkl_file:
+                    self.cm = pkl.load(pkl_file)
 
             # 1.1 SAVE XYZ OBJECTS FOR 3D VIEWER
             self.xyz = self.cm[:, 1:4]
@@ -1064,8 +1056,8 @@ class OpenCmDialog(wx.Dialog):
         self.uncertain_scores_text = wx.StaticText(self.floating_panel, -1, "Uncertain threshold: ")
 
         # 3. THRESHOLD INPUT BOXES
-        self.bad_th_text = wx.TextCtrl(self.floating_panel, -1, "0.1", size=(100, -1))
-        self.uncertain_th_text = wx.TextCtrl(self.floating_panel, -1, "0.2", size=(100, -1))
+        self.bad_th_text = wx.TextCtrl(self.floating_panel, -1, "0.5", size=(100, -1))
+        self.uncertain_th_text = wx.TextCtrl(self.floating_panel, -1, "0.7", size=(100, -1))
 
         # 4. LINE SPACER 2
         self.line2 = (wx.StaticLine(self.floating_panel), 0, wx.ALL | wx.EXPAND, 5)
@@ -1213,23 +1205,6 @@ class SavePolygonsDialog(wx.Dialog):
         self.main_box.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=10)
         self.floating_panel.SetSizerAndFit(self.main_box)
         self.main_box.Fit(self)
-
-    def open_regular_button(self, event):
-        """WHEN THE "Load as regular points" BUTTON IS PRESSED"""
-        self.bad_th_value = float(self.bad_th_text.GetValue())
-        self.uncertain_th_value = float(self.uncertain_th_text.GetValue())
-        self.regular_load_button = True
-        self.cluster_load_button = False
-        self.EndModal(1)
-
-    def open_cluster_button(self, event):
-        """WHEN THE "Load as clustered points" BUTTON IS PRESSED"""
-        self.bad_th_value = float(self.bad_th_text.GetValue())
-        self.uncertain_th_value = float(self.uncertain_th_text.GetValue())
-        self.cluster_load_button = True
-        self.regular_load_button = False
-        self.EndModal(1)
-
 
 class MessageDialog(wx.MessageDialog):
     """GENERIC MESSAGE DIALOG BOX. USED TO POPULATE MESSAGES IN THE GUI"""
